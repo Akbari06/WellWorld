@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import GlobeComponent from '../components/globe';
+import Chat from '../components/Chat';
 import './PlanningPage.css';
 
 const PlanningPage = ({ user }) => {
@@ -12,6 +13,7 @@ const PlanningPage = ({ user }) => {
   const [roomExists, setRoomExists] = useState(false);
   const [error, setError] = useState('');
   const [isMaster, setIsMaster] = useState(false);
+  const [masterId, setMasterId] = useState(null);
 
   useEffect(() => {
     (async () => {
@@ -42,6 +44,7 @@ const PlanningPage = ({ user }) => {
       // Check if user is master
       const userIsMaster = room.master_id === user.id;
       setIsMaster(userIsMaster);
+      setMasterId(room.master_id);
 
       // Verify user is a participant
       const { data: participant } = await supabase
@@ -100,6 +103,7 @@ const PlanningPage = ({ user }) => {
         <h1>Planning Room: {roomCode}</h1>
       </div>
       <div className="planning-content">
+        <Chat roomCode={roomCode} userId={user?.id} masterId={masterId} />
         <GlobeComponent roomCode={roomCode} isMaster={isMaster} user={user} />
       </div>
     </div>

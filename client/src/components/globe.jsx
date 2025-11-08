@@ -2,7 +2,6 @@ import React, { useEffect, useRef, useState } from "react";
 import Globe from "globe.gl";
 import * as THREE from "three";
 import { supabase } from "../lib/supabaseClient";
-import countriesUrl from "./countries.geojson"; // This will be a URL string
 
 // Function to get major cities for a country (3-4 cities per country)
 const getCitiesForCountry = (countryName) => {
@@ -502,9 +501,15 @@ const GlobeComponent = ({ roomCode, isMaster, user }) => {
 
   //GeoJSON data to show all countrise
   useEffect(() => {
+    const countriesUrl = '/countries.geojson'; // Load from public folder
     console.log("Fetching countries data from:", countriesUrl);
     fetch(countriesUrl)
-      .then(response => response.json())
+      .then(response => {
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+      })
       .then(data => {
         //exclude random bs places
         const filteredFeatures = data.features.filter(feature => {

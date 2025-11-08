@@ -57,7 +57,8 @@ const RoomPage = ({ user }) => {
             console.log('Profile fetch for user:', p.user_id, 'Profile:', profile, 'Error:', profileError);
             
             if (!profileError && profile) {
-              // Use username if available, otherwise use email prefix, otherwise use email
+              // Prioritize: username -> email prefix -> full email -> null
+              // This ensures we use the actual username from the profiles table first
               username = profile.username || 
                         profile.email?.split('@')[0] || 
                         profile.email || 
