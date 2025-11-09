@@ -149,6 +149,38 @@
   cursor: not-allowed;
 }
 
+.ask-worldai-btn {
+  width: 100%;
+  padding: 12px 20px;
+  margin: 12px 18px 0;
+  font-size: 14px;
+  font-weight: 700;
+  background: linear-gradient(135deg, #7c3aed, #2563eb);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+  box-shadow: 0 12px 25px rgba(37, 99, 235, 0.35);
+}
+
+.ask-worldai-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 16px 30px rgba(37, 99, 235, 0.45);
+}
+
+.ask-worldai-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.ask-worldai-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
 @media (max-width: 640px) {
   .chat-container {
     border-radius: 18px;

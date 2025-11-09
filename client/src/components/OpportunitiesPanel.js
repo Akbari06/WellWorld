@@ -81,12 +81,78 @@ const OpportunitiesPanel = ({ roomCode, onOpportunitySelect, selectedCountry, on
     loadOpportunities();
   }, []);
 
-  // Notify parent when opportunities change
+  // Helper function to match country names
+  const matchCountry = (oppCountry, selectedCountry) => {
+    const opp = oppCountry?.toLowerCase().trim() || '';
+    const selected = selectedCountry?.toLowerCase().trim() || '';
+    
+    if (!opp || !selected) return false;
+    
+    // Direct match
+    if (opp === selected) return true;
+    
+    // Country name mapping for variations
+    const countryGroups = [
+      ['united states', 'united states of america', 'usa'],
+      ['united kingdom', 'uk', 'britain', 'great britain', 'england'],
+      ['russia', 'russian federation'],
+      ['japan'],
+      ['brazil'],
+      ['india'],
+      ['germany'],
+      ['australia'],
+      ['mexico'],
+      ['china'],
+      ['argentina'],
+      ['egypt'],
+    ];
+    
+    // Check if both countries are in the same group
+    for (const group of countryGroups) {
+      const selectedInGroup = group.some(v => v === selected);
+      const oppInGroup = group.some(v => v === opp);
+      if (selectedInGroup && oppInGroup) {
+        return true;
+      }
+    }
+    
+    // For multi-word countries, only match if one is a substring of the other
+    if (selected.includes(opp) && opp.length >= 5) {
+      return true;
+    }
+    if (opp.includes(selected) && selected.length >= 5) {
+      return true;
+    }
+    
+    return false;
+  };
+
+  // Calculate displayed opportunities (same logic as in render)
+  const getDisplayedOpportunities = () => {
+    let filteredOpportunities = opportunities;
+    
+    // If a country is selected, filter by country
+    if (selectedCountry) {
+      filteredOpportunities = opportunities.filter(opp => {
+        return matchCountry(opp.country, selectedCountry);
+      });
+    }
+    
+    // Then apply showAllOpportunities filter
+    const displayed = showAllOpportunities 
+      ? filteredOpportunities 
+      : filteredOpportunities.filter(opp => opp.id === selectedOpportunityId);
+    
+    return displayed;
+  };
+
+  // Expose displayed opportunities to parent (not all opportunities)
   useEffect(() => {
     if (onOpportunitiesChange && opportunities.length > 0) {
-      onOpportunitiesChange(opportunities);
+      const displayed = getDisplayedOpportunities();
+      onOpportunitiesChange(displayed);
     }
-  }, [opportunities, onOpportunitiesChange]);
+  }, [opportunities, selectedCountry, showAllOpportunities, selectedOpportunityId, onOpportunitiesChange]);
 
   // Load initial selected opportunity from database
   useEffect(() => {
@@ -288,58 +354,6 @@ const OpportunitiesPanel = ({ roomCode, onOpportunitySelect, selectedCountry, on
       </div>
     );
   }
-
-  // Helper function to match country names
-  // Handles variations between GeoJSON country names and opportunity country names
-  const matchCountry = (oppCountry, selectedCountry) => {
-    const opp = oppCountry?.toLowerCase().trim() || '';
-    const selected = selectedCountry?.toLowerCase().trim() || '';
-    
-    if (!opp || !selected) return false;
-    
-    // Direct match
-    if (opp === selected) return true;
-    
-    // Country name mapping for variations
-    // Each array contains all valid names for that country
-    const countryGroups = [
-      ['united states', 'united states of america', 'usa'],
-      ['united kingdom', 'uk', 'britain', 'great britain', 'england'],
-      ['russia', 'russian federation'],
-      ['japan'],
-      ['brazil'],
-      ['india'],
-      ['germany'],
-      ['australia'],
-      ['mexico'],
-      ['china'],
-      ['argentina'],
-      ['egypt'],
-    ];
-    
-    // Check if both countries are in the same group
-    for (const group of countryGroups) {
-      const selectedInGroup = group.some(v => v === selected);
-      const oppInGroup = group.some(v => v === opp);
-      if (selectedInGroup && oppInGroup) {
-        return true;
-      }
-    }
-    
-    // For multi-word countries, only match if one is a substring of the other
-    // This handles "United States" matching "United States of America"
-    // But only if the shorter one is completely contained in the longer one
-    if (selected.includes(opp) && opp.length >= 5) {
-      // "united states" is contained in "united states of america"
-      return true;
-    }
-    if (opp.includes(selected) && selected.length >= 5) {
-      // "united states of america" contains "united states"
-      return true;
-    }
-    
-    return false;
-  };
 
   // Filter opportunities based on showAllOpportunities state and selected country
   let filteredOpportunities = opportunities;

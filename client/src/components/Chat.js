@@ -2,11 +2,12 @@ import React, { useEffect, useState, useRef } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import './Chat.css';
 
-const Chat = ({ roomCode, userId, masterId }) => {
+const Chat = ({ roomCode, userId, masterId, opportunities = [] }) => {
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
   const [usernames, setUsernames] = useState({}); // Cache for usernames
+  const [askWorldAILoading, setAskWorldAILoading] = useState(false);
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
 
@@ -244,6 +245,75 @@ const Chat = ({ roomCode, userId, masterId }) => {
     return userId === masterId;
   };
 
+  const handleAskWorldAI = async () => {
+    if (!opportunities || opportunities.length === 0) {
+      alert('No opportunities available to analyze. Please wait for opportunities to load.');
+      return;
+    }
+
+    setAskWorldAILoading(true);
+    
+    try {
+      // Get only the opportunities that are currently displayed (filtered by selectedCountry if any)
+      // We'll pass all opportunities and let the backend filter based on what's displayed
+      const opportunityLinks = opportunities
+        .filter(opp => opp.link && opp.link.trim() !== '')
+        .map(opp => ({
+          name: opp.name,
+          link: opp.link,
+          country: opp.country
+        }));
+
+      if (opportunityLinks.length === 0) {
+        alert('No opportunities with valid links found.');
+        setAskWorldAILoading(false);
+        return;
+      }
+
+      const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+      const response = await fetch(`${apiUrl}/api/gemini/recommend-opportunity`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          opportunities: opportunityLinks
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      
+      // Add the recommendation as a message from "WorldAI"
+      const recommendationMessage = `🤖 WorldAI Recommendation:\n\n${data.recommendation}`;
+      
+      // Send the recommendation as a message
+      const { data: messageData, error: messageError } = await supabase
+        .from('messages')
+        .insert({
+          room_code: roomCode,
+          user_id: userId,
+          message: recommendationMessage,
+        })
+        .select()
+        .single();
+
+      if (messageError) {
+        console.error('Error sending recommendation message:', messageError);
+        // Still show the recommendation to the user
+        alert(`WorldAI Recommendation:\n\n${data.recommendation}`);
+      }
+    } catch (error) {
+      console.error('Error calling WorldAI:', error);
+      alert(`Failed to get recommendation from WorldAI: ${error.message}`);
+    } finally {
+      setAskWorldAILoading(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="chat-container">
@@ -286,6 +356,21 @@ const Chat = ({ roomCode, userId, masterId }) => {
         )}
         <div ref={messagesEndRef} />
       </div>
+
+      <button 
+        className="ask-worldai-btn" 
+        onClick={handleAskWorldAI}
+        disabled={askWorldAILoading || !opportunities || opportunities.length === 0}
+      >
+        {askWorldAILoading ? (
+          <span className="ask-worldai-loading">
+            <span>⏳</span>
+            <span>Analyzing opportunities...</span>
+          </span>
+        ) : (
+          'Ask WorldAI'
+        )}
+      </button>
 
       <form className="chat-input-form" onSubmit={handleSendMessage}>
         <input

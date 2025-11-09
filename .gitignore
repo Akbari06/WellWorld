@@ -9,3 +9,6 @@ package-lock.json
 *.log
 .vscode/
 next-env.d.tss
+.venv/
+venv/
+**/venv/

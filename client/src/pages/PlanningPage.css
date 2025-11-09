@@ -31,19 +31,20 @@
 .btn-leave-room {
   padding: 10px 18px;
   font-size: 14px;
-  background: linear-gradient(120deg, #f43f5e, #f97316);
+  background: #dc2626;
   color: white;
   border: none;
   border-radius: 10px;
   font-weight: 700;
   cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s;
-  box-shadow: 0 8px 25px rgba(249, 115, 22, 0.35);
+  transition: transform 0.2s, box-shadow 0.2s, background 0.2s;
+  box-shadow: 0 8px 25px rgba(220, 38, 38, 0.35);
 }
 
 .btn-leave-room:hover {
+  background: #b91c1c;
   transform: translateY(-2px);
-  box-shadow: 0 12px 32px rgba(249, 115, 22, 0.45);
+  box-shadow: 0 12px 32px rgba(220, 38, 38, 0.45);
 }
 
 .planning-content {

@@ -1,10 +1,10 @@
 # backend/gemini/call_gemini.py
 import os
 import sys
-from dotenv import load_dotenv, find_dotenv
+from dotenv import load_dotenv, find_dotenv  # type: ignore
 
-from google import genai
-from google.genai import types
+from google import genai  # type: ignore
+from google.genai import types  # type: ignore
 
 # Load .env (if present)
 dotenv_path = find_dotenv()

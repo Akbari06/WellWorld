@@ -261,7 +261,7 @@ const PlanningPage = ({ user }) => {
           />
         </div>
         {/* Chat and Opportunities as overlays */}
-        <Chat roomCode={roomCode} userId={user?.id} masterId={masterId} />
+        <Chat roomCode={roomCode} userId={user?.id} masterId={masterId} opportunities={opportunities} />
         <OpportunitiesPanel 
           roomCode={roomCode} 
           selectedCountry={selectedCountry}

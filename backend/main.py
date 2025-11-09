@@ -37,6 +37,10 @@ from routers.gemini.idealist_to_geo import router as idealist_geo_router
 
 app.include_router(idealist_geo_router, prefix="/api/gemini", tags=["gemini"])
 
+from routers.gemini.recommend_opportunity import router as recommend_opportunity_router
+
+app.include_router(recommend_opportunity_router, prefix="/api/gemini", tags=["gemini"])
+
 
 @app.get("/", response_class=HTMLResponse)
 def root():
