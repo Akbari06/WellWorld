@@ -423,10 +423,6 @@ const LandingPage = ({ user }) => {
           </div>
           <div className="nav-actions">
             <div className="language-control">
-              <span className="language-caption">
-                <span className="language-icon" aria-hidden="true">🌐</span>
-                Language / Idioma / Langue
-              </span>
               <div className="language-select-wrapper">
                 <select
                   value={language}

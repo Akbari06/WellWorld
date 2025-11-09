@@ -8,4 +8,4 @@ package-lock.json
 .DS_Store
 *.log
 .vscode/
-next-env.d.ts
+next-env.d.tss
