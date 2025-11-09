@@ -147,6 +147,57 @@ def fetch_room_selected_country(room_code: str) -> Optional[str]:
         return None
 
 
+def fetch_latest_user_message(room_code: str) -> str:
+    """
+    Fetch the most recent user message (excluding bot recommendations) for the room_code from Supabase.
+    Returns the message text as a sanitized string, or empty string if no message found.
+    """
+    if not supabase:
+        logger.info("Supabase client not configured; cannot fetch latest message.")
+        return ""
+
+    try:
+        res = (
+            supabase.table("messages")
+            .select("message, created_at")
+            .eq("room_code", room_code)
+            .order("created_at", {"ascending": False})
+            .limit(10)
+            .execute()
+        )
+        data = None
+        if isinstance(res, dict) and "data" in res:
+            data = res["data"]
+            error = res.get("error")
+        else:
+            data = getattr(res, "data", None)
+            error = getattr(res, "error", None)
+
+        if error:
+            logger.warning("Error fetching latest message from supabase: %s", error)
+            return ""
+
+        if not data or not isinstance(data, list):
+            return ""
+
+        # Find the most recent non-bot message
+        for row in data:
+            text = (row.get("message") if isinstance(row, dict) else getattr(row, "message", "")) or ""
+            if not text:
+                continue
+            # Skip bot recommendations
+            if _is_worldai_recommendation(text):
+                continue
+            # Found the latest user message
+            return sanitize_text(text)
+
+        # No user messages found
+        return ""
+    except Exception as e:
+        logger.exception("Exception fetching latest message for room %s: %s", room_code, e)
+        return ""
+
+
 def fetch_room_messages(room_code: str, limit_chars: int = 1200) -> str:
     """
     Fetch recent messages for the room_code from Supabase (server-side).
@@ -314,7 +365,18 @@ async def recommend_opportunity(req: RecommendRequest):
             logger.exception("Failed to fetch selected country: %s", e)
             selected_country = None
 
-    # Fetch USER_MESSAGES from Supabase (server-side)
+    # Fetch the most recent user message from Supabase (server-side)
+    try:
+        LATEST_MESSAGE = fetch_latest_user_message(req.room_code)
+        if LATEST_MESSAGE:
+            logger.info("Fetched latest user message (len=%d): %s", len(LATEST_MESSAGE), trunc(LATEST_MESSAGE, 100))
+        else:
+            logger.info("No recent user messages found")
+    except Exception as e:
+        logger.exception("Failed to fetch latest user message: %s", e)
+        LATEST_MESSAGE = ""
+
+    # Fetch USER_MESSAGES from Supabase (server-side) - for full conversation context
     try:
         USER_MESSAGES = fetch_room_messages(req.room_code, limit_chars=1200)
         logger.info("Fetched USER_MESSAGES (len=%d)", len(USER_MESSAGES))
@@ -354,6 +416,7 @@ async def recommend_opportunity(req: RecommendRequest):
 
     # Now embed variables
     # WARNING: These inserts may be long. We sanitize to avoid control characters.
+    latest_message_sanitized = sanitize_text(LATEST_MESSAGE)
     user_messages_sanitized = sanitize_text(USER_MESSAGES)
     opps_sanitized = sanitize_text(OPPS)
 
@@ -362,11 +425,17 @@ async def recommend_opportunity(req: RecommendRequest):
     if selected_country:
         country_context = f"\n\nIMPORTANT: The user has selected the country '{selected_country.title()}'. Consider this when making your recommendation. "
     
+    # Build context about the most recent message
+    latest_message_context = ""
+    if latest_message_sanitized:
+        latest_message_context = f"\n\nMOST RECENT USER MESSAGE: \"{latest_message_sanitized}\"\nPay special attention to this most recent message - if it contains specific preferences (e.g., 'vegan', 'environmental', 'education'), prioritize opportunities that match these preferences."
+    
     system_prompt = (
         system_prompt_template
         + "\n\n"
         + f"The current opportunities the user is viewing (up to 5 from the current page): {opps_sanitized}\n\n"
         + f"Also consider the past user conversation: {user_messages_sanitized}"
+        + latest_message_context
         + country_context
         + "\n\nUse the current opportunities and past user conversation to decide which single opportunity to recommend and why."
     )
