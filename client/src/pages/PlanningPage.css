@@ -1,72 +1,87 @@
 .planning-page {
   width: 100%;
-  height: 100vh;
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  background: radial-gradient(circle at 20% 20%, #101727, #05060a);
+  color: #f8fafc;
 }
 
 .planning-header {
-  background: rgba(0, 0, 0, 0.8);
-  padding: 12px 24px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-  z-index: 1000;
+  background: rgba(6, 8, 18, 0.85);
+  padding: 16px 32px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+  z-index: 10;
   position: relative;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .planning-header h1 {
-  font-size: 20px;
-  font-weight: bold;
-  color: #fff;
+  font-size: 22px;
+  font-weight: 700;
+  color: #f8fafc;
   margin: 0;
+  letter-spacing: 0.04em;
 }
 
 .btn-leave-room {
-  padding: 8px 16px;
+  padding: 10px 18px;
   font-size: 14px;
-  background: #e53e3e;
+  background: linear-gradient(120deg, #f43f5e, #f97316);
   color: white;
   border: none;
-  border-radius: 6px;
-  font-weight: 600;
+  border-radius: 10px;
+  font-weight: 700;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: transform 0.2s, box-shadow 0.2s;
+  box-shadow: 0 8px 25px rgba(249, 115, 22, 0.35);
 }
 
 .btn-leave-room:hover {
-  background: #c53030;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(229, 62, 62, 0.4);
+  transform: translateY(-2px);
+  box-shadow: 0 12px 32px rgba(249, 115, 22, 0.45);
 }
 
 .planning-content {
   flex: 1;
-  overflow: hidden;
-  position: relative;
+  display: grid;
+  grid-template-columns: 340px minmax(0, 1fr) 340px;
+  gap: 20px;
+  padding: 20px 28px 32px;
   width: 100%;
-  height: calc(100vh - 60px);
+  height: calc(100vh - 80px);
+  box-sizing: border-box;
 }
 
-/* Globe container - background layer, centered, full viewport */
+.planning-content > * {
+  min-height: 0;
+}
+
+.planning-content > .chat-container {
+  grid-column: 1;
+}
+
+.planning-content > .opportunities-panel {
+  grid-column: 3;
+}
+
 .globe-wrapper {
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 0;
-  bottom: 0;
+  grid-column: 2;
+  position: relative;
   width: 100%;
   height: 100%;
-  z-index: 1; /* Behind the panels */
   display: flex;
   justify-content: center;
   align-items: center;
+  border-radius: 24px;
+  overflow: hidden;
+  background: radial-gradient(circle at 30% 20%, rgba(30, 58, 138, 0.4), rgba(0, 0, 0, 0.8));
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.45);
 }
-
-/* Globe is always full width - panels overlay on top */
-/* No media queries needed for globe positioning */
 
 .planning-loading,
 .planning-error {
@@ -98,3 +113,32 @@
   color: #666;
 }
 
+@media (max-width: 1200px) {
+  .planning-content {
+    grid-template-columns: 300px minmax(0, 1fr);
+  }
+
+  .planning-content .opportunities-panel {
+    grid-column: span 2;
+    height: 320px;
+  }
+}
+
+@media (max-width: 900px) {
+  .planning-content {
+    grid-template-columns: minmax(0, 1fr);
+    grid-auto-rows: minmax(0, auto);
+    height: auto;
+  }
+
+  .planning-content .chat-container,
+  .planning-content .opportunities-panel {
+    grid-column: 1;
+    height: auto;
+  }
+
+  .globe-wrapper {
+    grid-column: 1;
+    height: 60vh;
+  }
+}

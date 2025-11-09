@@ -16,6 +16,142 @@ const LandingPage = ({ user }) => {
   const [publicRooms, setPublicRooms] = useState([]);
   const [loadingRooms, setLoadingRooms] = useState(true);
   const [expandedDescription, setExpandedDescription] = useState(null);
+  const [language, setLanguage] = useState('en');
+  const [activeTab, setActiveTab] = useState('create');
+  const [roomName, setRoomName] = useState('');
+  const languageOptions = [
+    { value: 'en', label: 'English' },
+    { value: 'es', label: 'Español' },
+    { value: 'fr', label: 'Français' },
+    { value: 'de', label: 'Deutsch' },
+    { value: 'pt', label: 'Português' },
+  ];
+
+  const translations = {
+    en: {
+      languageLabel: 'Language',
+      heroEyebrow: 'Plan journeys that create authentic change',
+      heroTitle: 'Plan Your Impact Journey',
+      heroCopy:
+        'Connect with others to discover wellbeing-focused travel experiences that create positive social impact. No resorts. No tourism. Just meaningful connections and authentic change.',
+      createTab: 'Create Room',
+      joinTab: 'Join Room',
+      createCardTitle: 'Create a New Room',
+      createCardSubtitle: 'Start a private planning session with your group.',
+      roomNameLabel: 'Room Name',
+      roomNamePlaceholder: 'e.g., Peru Wellbeing Adventure',
+      createButton: 'Create Room',
+      joinCardTitle: 'Join an Existing Room',
+      joinCardSubtitle: 'Already have a code? Jump into your team’s planning room.',
+      joinCardButton: 'Go to Join Room',
+      publicRoomsTitle: 'Public Rooms',
+      publicRoomsSubtitle: 'Join open rooms and connect with like-minded travelers.',
+      loadingRooms: 'Loading public rooms...',
+      noPublicRooms: 'No public rooms available at the moment.',
+    },
+    es: {
+      languageLabel: 'Idioma',
+      heroEyebrow: 'Planifica viajes que generen cambio auténtico',
+      heroTitle: 'Planifica Tu Viaje de Impacto',
+      heroCopy:
+        'Conecta con otros para descubrir experiencias de viaje enfocadas en el bienestar que crean impacto social positivo. Sin resorts. Sin turismo masivo. Solo conexiones significativas y cambio auténtico.',
+      createTab: 'Crear Sala',
+      joinTab: 'Unirse a Sala',
+      createCardTitle: 'Crea una Nueva Sala',
+      createCardSubtitle: 'Inicia una sesión privada de planificación con tu grupo.',
+      roomNameLabel: 'Nombre de la Sala',
+      roomNamePlaceholder: 'p. ej., Aventura de Bienestar en Perú',
+      createButton: 'Crear Sala',
+      joinCardTitle: 'Únete a una Sala',
+      joinCardSubtitle: '¿Ya tienes un código? Ingresa a la sala de tu equipo.',
+      joinCardButton: 'Ir a Unirse',
+      publicRoomsTitle: 'Salas Públicas',
+      publicRoomsSubtitle: 'Únete a salas abiertas y conecta con otros viajeros.',
+      loadingRooms: 'Cargando salas públicas...',
+      noPublicRooms: 'No hay salas públicas disponibles por ahora.',
+    },
+    fr: {
+      languageLabel: 'Langue',
+      heroEyebrow: 'Planifiez des voyages qui créent un vrai changement',
+      heroTitle: 'Planifiez Votre Voyage à Impact',
+      heroCopy:
+        'Connectez-vous avec d’autres pour découvrir des expériences axées sur le bien-être qui génèrent un impact social positif. Pas de resorts. Pas de tourisme de masse. Seulement des liens authentiques.',
+      createTab: 'Créer une Salle',
+      joinTab: 'Rejoindre une Salle',
+      createCardTitle: 'Créer une Nouvelle Salle',
+      createCardSubtitle: 'Lancez une session de planification privée avec votre groupe.',
+      roomNameLabel: 'Nom de la Salle',
+      roomNamePlaceholder: 'ex., Aventure Bien-Être au Pérou',
+      createButton: 'Créer la Salle',
+      joinCardTitle: 'Rejoindre une Salle Existante',
+      joinCardSubtitle: 'Vous avez déjà un code ? Rejoignez votre équipe.',
+      joinCardButton: 'Aller à Rejoindre',
+      publicRoomsTitle: 'Salles Publiques',
+      publicRoomsSubtitle: 'Rejoignez des salles ouvertes et connectez-vous avec d’autres voyageurs.',
+      loadingRooms: 'Chargement des salles publiques...',
+      noPublicRooms: 'Aucune salle publique disponible pour le moment.',
+    },
+    de: {
+      languageLabel: 'Sprache',
+      heroEyebrow: 'Plane Reisen, die echten Wandel schaffen',
+      heroTitle: 'Plane Deine Impact-Reise',
+      heroCopy:
+        'Vernetze dich mit anderen, um Wohlfühlreisen zu entdecken, die positiven sozialen Einfluss haben. Keine Resorts. Kein Massentourismus. Nur echte Verbindungen und Veränderung.',
+      createTab: 'Raum Erstellen',
+      joinTab: 'Raum Beitreten',
+      createCardTitle: 'Neuen Raum Erstellen',
+      createCardSubtitle: 'Starte eine private Planungssitzung mit deiner Gruppe.',
+      roomNameLabel: 'Raumname',
+      roomNamePlaceholder: 'z. B. Peru Wohlfühlreise',
+      createButton: 'Raum Erstellen',
+      joinCardTitle: 'Bestehendem Raum Beitreten',
+      joinCardSubtitle: 'Hast du schon einen Code? Tritt dem Raum deines Teams bei.',
+      joinCardButton: 'Zum Beitritt',
+      publicRoomsTitle: 'Öffentliche Räume',
+      publicRoomsSubtitle: 'Tritt offenen Räumen bei und vernetze dich mit Gleichgesinnten.',
+      loadingRooms: 'Öffentliche Räume werden geladen...',
+      noPublicRooms: 'Aktuell sind keine öffentlichen Räume verfügbar.',
+    },
+    pt: {
+      languageLabel: 'Idioma',
+      heroEyebrow: 'Planeje viagens que geram mudança autêntica',
+      heroTitle: 'Planeje Sua Jornada de Impacto',
+      heroCopy:
+        'Conecte-se com outras pessoas para descobrir experiências de viagem focadas em bem-estar que criam impacto social positivo. Sem resorts. Sem turismo. Apenas conexões significativas e mudança real.',
+      createTab: 'Criar Sala',
+      joinTab: 'Entrar na Sala',
+      createCardTitle: 'Criar Nova Sala',
+      createCardSubtitle: 'Inicie uma sessão privada de planejamento com seu grupo.',
+      roomNameLabel: 'Nome da Sala',
+      roomNamePlaceholder: 'ex.: Aventura de Bem-Estar no Peru',
+      createButton: 'Criar Sala',
+      joinCardTitle: 'Entrar em uma Sala',
+      joinCardSubtitle: 'Já tem um código? Entre na sala do seu time.',
+      joinCardButton: 'Ir para Entrar',
+      publicRoomsTitle: 'Salas Públicas',
+      publicRoomsSubtitle: 'Entre em salas abertas e conecte-se com outros viajantes.',
+      loadingRooms: 'Carregando salas públicas...',
+      noPublicRooms: 'Nenhuma sala pública disponível no momento.',
+    },
+  };
+
+  const copy = translations[language] || translations.en;
+  const [theme, setTheme] = useState(() => {
+    if (typeof window === 'undefined') {
+      return 'dark';
+    }
+    return localStorage.getItem('landingTheme') || 'dark';
+  });
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('landingTheme', theme);
+    }
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
+  };
 
   const handleCreateRoom = async () => {
     if (!user) {
@@ -59,12 +195,14 @@ const LandingPage = ({ user }) => {
       }
 
       // Create room
+      const sanitizedRoomName = roomName.trim();
+
       const { data: room, error: createError } = await supabase
         .from('rooms')
         .insert({
           room_code: roomCode,
           master_id: currentUserId,
-          name: `Room ${roomCode}`,
+          name: sanitizedRoomName || `Room ${roomCode}`,
           is_public: false,
         })
         .select()
@@ -89,6 +227,7 @@ const LandingPage = ({ user }) => {
       }
 
       navigate(`/room/${room.room_code}`);
+      setRoomName('');
     } catch (err) {
       console.error('Error creating room:', err);
       setError('Failed to create room. Please try again.');
@@ -270,122 +409,231 @@ const LandingPage = ({ user }) => {
   };
 
   return (
-    <div className="landing-page">
-      {user && (
-        <div className="profile-section-top">
-          <div className="profile-info">
-            <UserIcon className="profile-icon" />
-            <span className="profile-email">{user.email}</span>
-          </div>
-          <button
-            className="btn-profile-signout"
-            onClick={async () => {
-              await supabase.auth.signOut();
-            }}
-          >
-            Sign Out
-          </button>
-        </div>
-      )}
-      <div className="landing-container">
-        <h1 className="landing-title">WellWorld</h1>
-        <p className="landing-subtitle">Plan your social-good journey together</p>
-
-        {error && <div className="error-message">{error}</div>}
-
-        <div className="button-group">
-          <button
-            className="btn btn-primary"
-            onClick={handleCreateRoom}
-            disabled={loading}
-          >
-            {loading ? 'Creating...' : 'Create Room'}
-          </button>
-
-          <button
-            className="btn btn-secondary"
-            onClick={handleJoinRoom}
-            disabled={loading}
-          >
-            Join Private Room
-          </button>
-        </div>
-
-        {/* Public Rooms Section */}
-        <div className="public-rooms-section">
-          <h2 className="public-rooms-title">Public Rooms</h2>
-          <p className="public-rooms-subtitle">
-            Join open rooms and connect with like-minded travelers.
-          </p>
-
-          {loadingRooms ? (
-            <div className="loading-rooms">Loading public rooms...</div>
-          ) : publicRooms.length === 0 ? (
-            <div className="no-public-rooms">
-              <p>No public rooms available at the moment.</p>
+    <div className={`landing-page ${theme}`}>
+      <div className="landing-shell">
+        <header className="landing-nav">
+          <div className="brand-cluster">
+            <div className="brand-mark">
+              <span>WW</span>
             </div>
+            <div className="brand-copy">
+              <span className="brand-name">WellWorld</span>
+              <span className="brand-tagline">Wellbeing through Social Good</span>
+            </div>
+          </div>
+          <div className="nav-actions">
+            <div className="language-control">
+              <span className="language-caption">
+                <span className="language-icon" aria-hidden="true">🌐</span>
+                Language / Idioma / Langue
+              </span>
+              <div className="language-select-wrapper">
+                <select
+                  value={language}
+                  onChange={(e) => setLanguage(e.target.value)}
+                  aria-label="Select language"
+                >
+                  {languageOptions.map((lang) => (
+                    <option key={lang.value} value={lang.value}>
+                      {lang.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <button
+              type="button"
+              className="theme-toggle"
+              onClick={toggleTheme}
+              aria-label="Toggle light and dark mode"
+            >
+              <span className="theme-icon" aria-hidden="true">
+                {theme === 'dark' ? '☀️' : '🌙'}
+              </span>
+              {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
+            </button>
+            {user && (
+              <div className="profile-section-top">
+                <div className="profile-info">
+                  <UserIcon className="profile-icon" />
+                  <span className="profile-email">{user.email}</span>
+                </div>
+                <button
+                  className="btn-profile-signout"
+                  onClick={async () => {
+                    await supabase.auth.signOut();
+                  }}
+                >
+                  Sign Out
+                </button>
+              </div>
+            )}
+          </div>
+        </header>
+
+        <main className="landing-main-card">
+          <section className="hero">
+            <p className="hero-eyebrow">{copy.heroEyebrow}</p>
+            <h1>{copy.heroTitle}</h1>
+            <p className="hero-copy">{copy.heroCopy}</p>
+          </section>
+
+          {error && <div className="error-message">{error}</div>}
+
+          <div className="action-tabs" role="tablist">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeTab === 'create'}
+              className={`action-tab ${activeTab === 'create' ? 'active' : ''}`}
+              onClick={() => setActiveTab('create')}
+            >
+              {copy.createTab}
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeTab === 'join'}
+              className={`action-tab ${activeTab === 'join' ? 'active' : ''}`}
+              onClick={() => setActiveTab('join')}
+            >
+              {copy.joinTab}
+            </button>
+          </div>
+
+          {activeTab === 'create' ? (
+            <section className="card create-card">
+              <div className="card-header">
+                <div className="card-icon">+</div>
+                <div>
+                  <h3>{copy.createCardTitle}</h3>
+                  <p>{copy.createCardSubtitle}</p>
+                </div>
+              </div>
+              <label htmlFor="room-name-input" className="input-label">
+                {copy.roomNameLabel}
+              </label>
+              <input
+                id="room-name-input"
+                type="text"
+                value={roomName}
+                onChange={(e) => setRoomName(e.target.value)}
+                placeholder={copy.roomNamePlaceholder}
+                className="input-field"
+                disabled={loading}
+              />
+              <button
+                className="btn btn-primary"
+                onClick={handleCreateRoom}
+                disabled={loading}
+              >
+                {loading ? `${copy.createButton}...` : copy.createButton}
+              </button>
+            </section>
           ) : (
-            <div className="public-rooms-list">
-              {publicRooms.map((room) => (
-                <div key={room.id} className="public-room-card">
-                  <div className="public-room-info">
-                    <div className="public-room-header">
-                      <h3 className="public-room-name">
-                        {room.name || `Room ${room.room_code}`}
-                      </h3>
-                      {room.description && (
-                        <button
-                          className="btn-dots"
-                          onClick={() => setExpandedDescription(
-                            expandedDescription === room.id ? null : room.id
-                          )}
-                          aria-label="Show description"
-                        >
-                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <circle cx="12" cy="12" r="1"/>
-                            <circle cx="12" cy="5" r="1"/>
-                            <circle cx="12" cy="19" r="1"/>
-                          </svg>
-                        </button>
+            <section className="card join-card">
+              <div className="card-header">
+                <div className="card-icon">⇢</div>
+                <div>
+                  <h3>{copy.joinCardTitle}</h3>
+                  <p>{copy.joinCardSubtitle}</p>
+                </div>
+              </div>
+              <button
+                className="btn btn-secondary"
+                onClick={handleJoinRoom}
+                disabled={loading}
+              >
+                {copy.joinCardButton}
+              </button>
+            </section>
+          )}
+
+          <div className="public-rooms-section">
+            <h2 className="public-rooms-title">{copy.publicRoomsTitle}</h2>
+            <p className="public-rooms-subtitle">
+              {copy.publicRoomsSubtitle}
+            </p>
+
+            {loadingRooms ? (
+              <div className="loading-rooms">{copy.loadingRooms}</div>
+            ) : publicRooms.length === 0 ? (
+              <div className="no-public-rooms">
+                <p>{copy.noPublicRooms}</p>
+              </div>
+            ) : (
+              <div className="public-rooms-list">
+                {publicRooms.map((room) => (
+                  <div key={room.id} className="public-room-card">
+                    <div className="public-room-info">
+                      <div className="public-room-header">
+                        <h3 className="public-room-name">
+                          {room.name || `Room ${room.room_code}`}
+                        </h3>
+                        {room.description && (
+                          <button
+                            className="btn-dots"
+                            onClick={() =>
+                              setExpandedDescription(
+                                expandedDescription === room.id ? null : room.id
+                              )
+                            }
+                            aria-label="Show description"
+                          >
+                            <svg
+                              width="20"
+                              height="20"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            >
+                              <circle cx="12" cy="12" r="1" />
+                              <circle cx="12" cy="5" r="1" />
+                              <circle cx="12" cy="19" r="1" />
+                            </svg>
+                          </button>
+                        )}
+                      </div>
+                      <p className="public-room-code">Code: {room.room_code}</p>
+                      <p className="public-room-meta">
+                        {room.participant_count} member{room.participant_count !== 1 ? 's' : ''} • Active now
+                        {room.creator_username ? (
+                          <span className="public-room-creator">
+                            {' • Created by '}
+                            <span className="creator-name">{room.creator_username}</span>
+                          </span>
+                        ) : (
+                          <span className="public-room-creator">
+                            {' • Created by '}
+                            <span className="creator-name">Unknown</span>
+                          </span>
+                        )}
+                      </p>
+                      {expandedDescription === room.id && room.description && (
+                        <div className="public-room-description">
+                          <p>{room.description}</p>
+                        </div>
                       )}
                     </div>
-                    <p className="public-room-code">Code: {room.room_code}</p>
-                    <p className="public-room-meta">
-                      {room.participant_count} member{room.participant_count !== 1 ? 's' : ''} • Active now
-                      {room.creator_username ? (
-                        <span className="public-room-creator">
-                          {' • Created by '}
-                          <span className="creator-name">{room.creator_username}</span>
-                        </span>
-                      ) : (
-                        <span className="public-room-creator">
-                          {' • Created by '}
-                          <span className="creator-name">Unknown</span>
-                        </span>
-                      )}
-                    </p>
-                    {expandedDescription === room.id && room.description && (
-                      <div className="public-room-description">
-                        <p>{room.description}</p>
-                      </div>
-                    )}
+                    <button
+                      className="btn btn-join-public"
+                      onClick={() => handleJoinPublicRoom(room.room_code)}
+                      disabled={loading}
+                    >
+                      Join
+                    </button>
                   </div>
-                  <button
-                    className="btn btn-join-public"
-                    onClick={() => handleJoinPublicRoom(room.room_code)}
-                    disabled={loading}
-                  >
-                    Join
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </main>
       </div>
     </div>
   );
 };
 
 export default LandingPage;
-
