@@ -117,7 +117,7 @@ const JoinRoomPage = ({ user }) => {
     <div className="join-room-page">
       <div className="join-room-container">
         <div className="join-room-logo">
-          <span className="join-room-logo-mark">WW</span>
+          <img className="join-room-logo-mark" src="/favicon.ico" alt="WellWorld Logo" />
           <div className="join-room-logo-text">
             <h1 className="page-title">Join Room</h1>
             <p className="join-room-tagline">Enter Room Code</p>

@@ -1,21 +1,21 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap');
 
 .landing-page {
-  --bg-gradient: linear-gradient(135deg, #e8f5e9 0%, #f0fff4 100%);
+  --bg-gradient: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 50%, #e0e7ff 100%);
   --panel-bg: rgba(255, 255, 255, 0.95);
-  --panel-border: rgba(15, 118, 110, 0.12);
-  --panel-shadow: 0 40px 70px rgba(15, 118, 110, 0.15);
-  --text-color: #064e3b;
-  --muted-color: #4c7a67;
-  --chip-bg: rgba(16, 185, 129, 0.12);
-  --chip-color: #0f766e;
-  --card-bg: rgba(248, 252, 250, 0.9);
-  --card-border: rgba(15, 118, 110, 0.12);
-  --primary-gradient: linear-gradient(120deg, #34d399, #059669);
-  --secondary-gradient: linear-gradient(120deg, #a3e635, #22c55e);
-  --button-text: #022c22;
+  --panel-border: rgba(124, 58, 237, 0.15);
+  --panel-shadow: 0 40px 70px rgba(124, 58, 237, 0.12);
+  --text-color: #1e293b;
+  --muted-color: #64748b;
+  --chip-bg: rgba(124, 58, 237, 0.1);
+  --chip-color: #6366f1;
+  --card-bg: rgba(255, 255, 255, 0.9);
+  --card-border: rgba(124, 58, 237, 0.15);
+  --primary-gradient: linear-gradient(135deg, #7c3aed, #2563eb);
+  --secondary-gradient: linear-gradient(135deg, #7c3aed, #2563eb);
+  --button-text: #ffffff;
   --danger-bg: rgba(248, 113, 113, 0.1);
-  --danger-text: #b91c1c;
+  --danger-text: #dc2626;
   font-family: 'Space Grotesk', 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   min-height: 100vh;
   display: flex;
@@ -29,21 +29,21 @@
 }
 
 .landing-page.dark {
-  --bg-gradient: radial-gradient(circle at 0% 0%, #064e3b 0%, #022c22 50%, #011712 100%);
-  --panel-bg: rgba(6, 30, 24, 0.95);
-  --panel-border: rgba(16, 185, 129, 0.18);
-  --panel-shadow: 0 40px 120px rgba(0, 0, 0, 0.65);
-  --text-color: #ecfdf5;
-  --muted-color: #a7f3d0;
-  --chip-bg: rgba(45, 212, 191, 0.18);
-  --chip-color: #5eead4;
-  --card-bg: rgba(6, 30, 24, 0.85);
-  --card-border: rgba(255, 255, 255, 0.08);
-  --primary-gradient: linear-gradient(120deg, #16a34a, #065f46);
-  --secondary-gradient: linear-gradient(120deg, #22d3ee, #14b8a6);
-  --button-text: #ecfdf5;
-  --danger-bg: rgba(248, 113, 113, 0.12);
-  --danger-text: #fecaca;
+  --bg-gradient: radial-gradient(circle at 20% 20%, #101727, #05060a);
+  --panel-bg: rgba(6, 8, 18, 0.9);
+  --panel-border: rgba(124, 58, 237, 0.2);
+  --panel-shadow: 0 40px 120px rgba(124, 58, 237, 0.3);
+  --text-color: #f8fafc;
+  --muted-color: #cbd5e1;
+  --chip-bg: rgba(124, 58, 237, 0.18);
+  --chip-color: #7c3aed;
+  --card-bg: rgba(15, 18, 35, 0.9);
+  --card-border: rgba(124, 58, 237, 0.2);
+  --primary-gradient: linear-gradient(135deg, #7c3aed, #2563eb);
+  --secondary-gradient: linear-gradient(135deg, #7c3aed, #2563eb);
+  --button-text: #f8fafc;
+  --danger-bg: rgba(248, 113, 113, 0.15);
+  --danger-text: #fca5a5;
 }
 
 .landing-shell {
@@ -75,14 +75,18 @@
   width: 52px;
   height: 52px;
   border-radius: 16px;
-  background: var(--primary-gradient);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: 700;
-  color: #fff;
-  letter-spacing: 0.05em;
-  box-shadow: 0 10px 25px rgba(99, 102, 241, 0.3);
+  box-shadow: 0 10px 25px rgba(37, 99, 235, 0.35);
+  overflow: hidden;
+}
+
+.brand-mark img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  padding: 8px;
 }
 
 .brand-copy {
@@ -197,7 +201,7 @@
 }
 
 .profile-email {
-  color: var(--muted-color);
+  color: var(--text-color);
   font-weight: 500;
 }
 
@@ -265,7 +269,7 @@
 .action-tabs {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  background: rgba(255, 255, 255, 0.4);
+  background: rgba(241, 245, 249, 0.8);
   border-radius: 999px;
   border: 1px solid var(--panel-border);
   padding: 4px;
@@ -273,7 +277,7 @@
 }
 
 .landing-page.dark .action-tabs {
-  background: rgba(15, 23, 42, 0.6);
+  background: rgba(15, 18, 35, 0.6);
 }
 
 .action-tab {
@@ -289,14 +293,15 @@
 }
 
 .action-tab.active {
-  background: #fff;
+  background: #ffffff;
   color: var(--text-color);
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 10px 25px rgba(124, 58, 237, 0.2);
 }
 
 .landing-page.dark .action-tab.active {
-  background: rgba(255, 255, 255, 0.08);
-  color: #fefce8;
+  background: rgba(124, 58, 237, 0.2);
+  color: #f8fafc;
+  box-shadow: 0 10px 25px rgba(124, 58, 237, 0.25);
 }
 
 .card {
@@ -334,13 +339,17 @@
   width: 48px;
   height: 48px;
   border-radius: 16px;
-  background: rgba(99, 102, 241, 0.15);
+  background: rgba(124, 58, 237, 0.1);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 20px;
   color: var(--text-color);
   font-weight: 600;
+}
+
+.landing-page.dark .card-icon {
+  background: rgba(124, 58, 237, 0.15);
 }
 
 .input-label {
@@ -357,13 +366,13 @@
   border-radius: 16px;
   border: 1px solid var(--panel-border);
   font-size: 16px;
-  background: rgba(255, 255, 255, 0.7);
+  background: rgba(255, 255, 255, 0.9);
   color: var(--text-color);
   margin-bottom: 16px;
 }
 
 .landing-page.dark .input-field {
-  background: rgba(15, 23, 42, 0.7);
+  background: rgba(15, 18, 35, 0.8);
   color: #f8fafc;
 }
 
@@ -385,12 +394,12 @@
 
 .btn-primary {
   background: var(--primary-gradient);
-  box-shadow: 0 18px 35px rgba(99, 102, 241, 0.35);
+  box-shadow: 0 18px 35px rgba(37, 99, 235, 0.35);
 }
 
 .btn-secondary {
   background: var(--secondary-gradient);
-  box-shadow: 0 18px 35px rgba(16, 185, 129, 0.35);
+  box-shadow: 0 18px 35px rgba(37, 99, 235, 0.35);
 }
 
 .btn:hover:not(:disabled) {
@@ -460,8 +469,8 @@
 
 .public-room-card:hover {
   transform: translateY(-2px);
-  border-color: rgba(99, 102, 241, 0.4);
-  box-shadow: 0 18px 35px rgba(15, 23, 42, 0.15);
+  border-color: rgba(124, 58, 237, 0.4);
+  box-shadow: 0 18px 35px rgba(124, 58, 237, 0.25);
 }
 
 .public-room-info {
@@ -535,7 +544,7 @@
 }
 
 .btn-dots:hover {
-  border-color: rgba(99, 102, 241, 0.4);
+  border-color: rgba(124, 58, 237, 0.4);
   color: var(--text-color);
 }
 
@@ -549,7 +558,7 @@
   font-weight: 600;
   cursor: pointer;
   transition: transform 0.2s, box-shadow 0.2s;
-  box-shadow: 0 15px 30px rgba(16, 185, 129, 0.35);
+  box-shadow: 0 15px 30px rgba(37, 99, 235, 0.35);
 }
 
 .btn-join-public:hover:not(:disabled) {
