@@ -1,0 +1,75 @@
+[
+  {
+    "latlon": [40.7128, -74.0060],
+    "name": "Community Garden Project",
+    "link": "https://example.com/garden",
+    "country": "United States"
+  },
+  {
+    "latlon": [51.5074, -0.1278],
+    "name": "London Food Bank",
+    "link": "https://example.com/foodbank",
+    "country": "United Kingdom"
+  },
+  {
+    "latlon": [35.6762, 139.6503],
+    "name": "Tokyo Elderly Care",
+    "link": "https://example.com/elderly",
+    "country": "Japan"
+  },
+  {
+    "latlon": [-23.5505, -46.6333],
+    "name": "São Paulo Education Initiative",
+    "link": "https://example.com/education",
+    "country": "Brazil"
+  },
+  {
+    "latlon": [28.6139, 77.2090],
+    "name": "Delhi Clean Water Project",
+    "link": "https://example.com/water",
+    "country": "India"
+  },
+  {
+    "latlon": [52.5200, 13.4050],
+    "name": "Berlin Refugee Support",
+    "link": "https://example.com/refugee",
+    "country": "Germany"
+  },
+  {
+    "latlon": [-33.8688, 151.2093],
+    "name": "Sydney Environmental Cleanup",
+    "link": "https://example.com/environment",
+    "country": "Australia"
+  },
+  {
+    "latlon": [19.4326, -99.1332],
+    "name": "Mexico City Youth Program",
+    "link": "https://example.com/youth",
+    "country": "Mexico"
+  },
+  {
+    "latlon": [55.7558, 37.6173],
+    "name": "Moscow Homeless Shelter",
+    "link": "https://example.com/shelter",
+    "country": "Russia"
+  },
+  {
+    "latlon": [39.9042, 116.4074],
+    "name": "Beijing Education Fund",
+    "link": "https://example.com/education-fund",
+    "country": "China"
+  },
+  {
+    "latlon": [-34.6037, -58.3816],
+    "name": "Buenos Aires Community Center",
+    "link": "https://example.com/community",
+    "country": "Argentina"
+  },
+  {
+    "latlon": [30.0444, 31.2357],
+    "name": "Cairo Medical Mission",
+    "link": "https://example.com/medical",
+    "country": "Egypt"
+  }
+]
+

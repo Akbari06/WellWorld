@@ -48,27 +48,25 @@
   position: relative;
   width: 100%;
   height: calc(100vh - 60px);
-  padding-left: 360px; /* Make room for chat on the left */
 }
 
-/* On smaller screens, remove padding so globe can use full width */
-@media (max-width: 1024px) {
-  .planning-content {
-    padding-left: 340px;
-  }
+/* Globe container - background layer, centered, full viewport */
+.globe-wrapper {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1; /* Behind the panels */
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
-@media (max-width: 768px) {
-  .planning-content {
-    padding-left: 300px;
-  }
-}
-
-@media (max-width: 640px) {
-  .planning-content {
-    padding-left: 0; /* Chat hidden on mobile */
-  }
-}
+/* Globe is always full width - panels overlay on top */
+/* No media queries needed for globe positioning */
 
 .planning-loading,
 .planning-error {

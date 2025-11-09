@@ -402,22 +402,24 @@ const getCameraPositionForPoint = (lat, lng, radius) => {
   const latRad = lat * (Math.PI / 180);
   const lngRad = lng * (Math.PI / 180);
   
-  // Calculate the point on the globe surface (normalized)
-  // Standard spherical to Cartesian conversion
-  const pointX = Math.cos(latRad) * Math.cos(lngRad);
-  const pointY = Math.sin(latRad);
-  const pointZ = Math.cos(latRad) * Math.sin(lngRad);
+  // Convert to Three.js spherical coordinates
+  // phi: colatitude (angle from +y axis), 0 at north pole, π at south pole
+  // theta: azimuthal angle (longitude), 0 at +x axis
+  const phi = (90 - lat) * (Math.PI / 180); // Colatitude
+  const theta = lng * (Math.PI / 180); // Longitude (no offset needed)
+  
+  // Convert spherical to Cartesian coordinates
+  // Standard Three.js convention: y is up, x/z are horizontal
+  const x = radius * Math.sin(phi) * Math.cos(theta);
+  const y = radius * Math.cos(phi);
+  const z = radius * Math.sin(phi) * Math.sin(theta);
   
   // Position camera opposite the point (so it looks at the point through the center)
-  // Multiply by -radius to position camera on the opposite side
-  return new THREE.Vector3(
-    -pointX * radius,
-    -pointY * radius,
-    -pointZ * radius
-  );
+  // Multiply by -1 to position camera on the opposite side
+  return new THREE.Vector3(-x, -y, -z);
 };
 
-const GlobeComponent = ({ roomCode, isMaster, user }) => {
+const GlobeComponent = ({ roomCode, isMaster, user, opportunityMarker, opportunities = [], onCountrySelect }) => {
   const globeRef = useRef();
   const globeInstanceRef = useRef(null);
   const selectedCountryRef = useRef(null);
@@ -427,6 +429,7 @@ const GlobeComponent = ({ roomCode, isMaster, user }) => {
   const [hoveredCountry, setHoveredCountry] = useState(null);
   const [countriesData, setCountriesData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [opportunityMarkerState, setOpportunityMarkerState] = useState(null);
 
   //keep refs in sync with props/state
   useEffect(() => {
@@ -441,6 +444,12 @@ const GlobeComponent = ({ roomCode, isMaster, user }) => {
     roomCodeRef.current = roomCode;
   }, [roomCode]);
 
+  // Sync opportunityMarker prop to state
+  useEffect(() => {
+    console.log('GlobeComponent: opportunityMarker prop changed:', opportunityMarker);
+    setOpportunityMarkerState(opportunityMarker);
+  }, [opportunityMarker]);
+
   // Load initial selected country from database
   useEffect(() => {
     if (!roomCode) return;
@@ -454,6 +463,10 @@ const GlobeComponent = ({ roomCode, isMaster, user }) => {
 
       if (room?.selected_country) {
         setSelectedCountry(room.selected_country);
+        // Notify parent component
+        if (onCountrySelect) {
+          onCountrySelect(room.selected_country);
+        }
       }
     };
 
@@ -486,6 +499,10 @@ const GlobeComponent = ({ roomCode, isMaster, user }) => {
           if (newSelectedCountry !== currentSelected) {
             console.log('Updating selected country to:', newSelectedCountry);
             setSelectedCountry(newSelectedCountry);
+            // Notify parent component
+            if (onCountrySelect) {
+              onCountrySelect(newSelectedCountry);
+            }
           }
         }
       )
@@ -589,18 +606,31 @@ const GlobeComponent = ({ roomCode, isMaster, user }) => {
         // Update local state immediately for instant feedback (master only)
         setSelectedCountry(newSelection);
         
+        // Notify parent component
+        if (onCountrySelect) {
+          onCountrySelect(newSelection);
+        }
+        
         // Update in database for real-time sync to all users
+        // Clear opportunity marker when country is selected
         if (currentRoomCode) {
           console.log("Updating database with selection:", newSelection, "for room:", currentRoomCode);
           supabase
             .from('rooms')
-            .update({ selected_country: newSelection })
+            .update({ 
+              selected_country: newSelection,
+              selected_opportunity_lat: null,
+              selected_opportunity_lng: null
+            })
             .eq('room_code', currentRoomCode)
             .then(({ error }) => {
               if (error) {
                 console.error('Error updating selected country:', error);
                 // Revert local state on error
                 setSelectedCountry(currentSelected);
+                if (onCountrySelect) {
+                  onCountrySelect(currentSelected);
+                }
               } else {
                 console.log('Successfully updated selected country in database:', newSelection);
               }
@@ -691,6 +721,98 @@ const GlobeComponent = ({ roomCode, isMaster, user }) => {
     controls.enableRotate = isMaster;
   }, [isMaster]);
 
+  // Handle opportunity marker: pan to location when opportunity is selected
+  useEffect(() => {
+    if (!globeInstanceRef.current) {
+      console.log('Globe not initialized yet, skipping opportunity pan');
+      return;
+    }
+    
+    const globe = globeInstanceRef.current;
+    const controls = globe.controls();
+    
+    if (!opportunityMarkerState || !opportunityMarkerState.lat || !opportunityMarkerState.lng) {
+      // No opportunity selected, resume auto-rotate if no country is selected
+      if (!selectedCountry) {
+        controls.autoRotate = true;
+      }
+      return;
+    }
+    
+    controls.autoRotate = false; // Stop rotating when opportunity is selected
+    
+    const { lat, lng } = opportunityMarkerState;
+    console.log('Panning to opportunity:', { lat, lng, fullState: opportunityMarkerState });
+    
+    // Small delay to ensure globe is ready
+    const panTimeout = setTimeout(() => {
+      // Try using globe.gl's pointOfView method first (if available)
+      // This is the preferred method as it handles camera positioning correctly
+      if (typeof globe.pointOfView === 'function') {
+        try {
+          // pointOfView expects: { lat, lng, altitude } and duration
+          // altitude controls zoom level (higher = more zoomed out)
+          // Using a closer altitude to highlight the location better
+          globe.pointOfView(
+            { lat, lng, altitude: 2.0 },
+            1500
+          );
+          console.log('Used pointOfView method for opportunity');
+          return;
+        } catch (error) {
+          console.warn('pointOfView failed, using manual calculation:', error);
+        }
+      }
+      
+      // Manual calculation fallback: get camera position to focus on the point
+      const camera = globe.camera();
+      const currentPos = camera.position.clone();
+      const radius = currentPos.length();
+      
+      console.log('Manual pan calculation:', { 
+        currentPos: { x: currentPos.x, y: currentPos.y, z: currentPos.z },
+        radius 
+      });
+      
+      // Calculate target camera position (opposite the point on globe)
+      const targetPos = getCameraPositionForPoint(lat, lng, radius);
+      
+      console.log('Target camera position:', { 
+        x: targetPos.x, 
+        y: targetPos.y, 
+        z: targetPos.z 
+      });
+      
+      // Animate smoothly to target position
+      const startPos = currentPos.clone();
+      let startTime = Date.now();
+      const duration = 1500;
+      
+      const animate = () => {
+        const elapsed = Date.now() - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        
+        const eased = progress < 0.5
+          ? 4 * progress * progress * progress
+          : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+        
+        camera.position.lerpVectors(startPos, targetPos, eased);
+        camera.lookAt(0, 0, 0);
+        controls.update();
+        
+        if (progress < 1) {
+          requestAnimationFrame(animate);
+        } else {
+          console.log('Finished panning to opportunity');
+        }
+      };
+      
+      animate();
+    }, 100); // Small delay to ensure globe is ready
+    
+    return () => clearTimeout(panTimeout);
+  }, [opportunityMarkerState, selectedCountry]);
+
   // Handle selected country changes: stop rotation, pan to country, update styling
   useEffect(() => {
     console.log('Selected country changed:', selectedCountry, 'globeInstance:', !!globeInstanceRef.current, 'countriesData:', !!countriesData);
@@ -703,7 +825,10 @@ const GlobeComponent = ({ roomCode, isMaster, user }) => {
     if (!selectedCountry) {
       console.log('No selected country, resetting auto-rotate');
       const controls = globeInstanceRef.current.controls();
-      controls.autoRotate = true;
+      // Only reset auto-rotate if no opportunity is selected
+      if (!opportunityMarkerState) {
+        controls.autoRotate = true;
+      }
       return;
     }
     
@@ -770,7 +895,7 @@ const GlobeComponent = ({ roomCode, isMaster, user }) => {
       
       animate();
     }
-  }, [selectedCountry, countriesData]);
+  }, [selectedCountry, countriesData, opportunityMarkerState]);
   
   // Reset auto-rotate when country is deselected
   useEffect(() => {
@@ -780,26 +905,105 @@ const GlobeComponent = ({ roomCode, isMaster, user }) => {
     controls.autoRotate = true; //continue rotation when deselected
   }, [selectedCountry]);
 
-  //updatye for cities 
+  // Update points for opportunities (red dots)
   useEffect(() => {
     if (!globeInstanceRef.current) return;
 
     const globe = globeInstanceRef.current;
+    const allPoints = [];
 
-    const cities = selectedCountry ? getCitiesForCountry(selectedCountry) : [];
+    // Priority: If a country is selected, show all opportunities in that country
+    // Only show single opportunity marker if no country is selected
+    if (selectedCountry && opportunities.length > 0) {
+      // Helper function to match country names (same as in OpportunitiesPanel)
+      const matchCountry = (oppCountry, selectedCountry) => {
+        const opp = oppCountry?.toLowerCase().trim() || '';
+        const selected = selectedCountry?.toLowerCase().trim() || '';
+        
+        if (!opp || !selected) return false;
+        
+        // Direct match
+        if (opp === selected) return true;
+        
+        // Country name mapping for variations
+        // Each array contains all valid names for that country
+        const countryGroups = [
+          ['united states', 'united states of america', 'usa'],
+          ['united kingdom', 'uk', 'britain', 'great britain', 'england'],
+          ['russia', 'russian federation'],
+          ['japan'],
+          ['brazil'],
+          ['india'],
+          ['germany'],
+          ['australia'],
+          ['mexico'],
+          ['china'],
+          ['argentina'],
+          ['egypt'],
+        ];
+        
+        // Check if both countries are in the same group
+        for (const group of countryGroups) {
+          const selectedInGroup = group.some(v => v === selected);
+          const oppInGroup = group.some(v => v === opp);
+          if (selectedInGroup && oppInGroup) {
+            return true;
+          }
+        }
+        
+        // For multi-word countries, only match if one is a substring of the other
+        // This handles "United States" matching "United States of America"
+        // But only if the shorter one is completely contained in the longer one
+        if (selected.includes(opp) && opp.length >= 5) {
+          // "united states" is contained in "united states of america"
+          return true;
+        }
+        if (opp.includes(selected) && selected.length >= 5) {
+          // "united states of america" contains "united states"
+          return true;
+        }
+        
+        return false;
+      };
+      
+      const countryOpportunities = opportunities.filter(opp => {
+        const matches = matchCountry(opp.country, selectedCountry);
+        console.log(`Globe: Checking "${opp.name}" (${opp.country}) vs "${selectedCountry}" = ${matches}`);
+        return matches;
+      });
+      
+      console.log(`Globe: Found ${countryOpportunities.length} opportunities for country: ${selectedCountry}`);
+      console.log(`Globe: Matching opportunities:`, countryOpportunities.map(o => ({ name: o.name, country: o.country })));
+
+      // Add all opportunities in the selected country as red dots
+      countryOpportunities.forEach((opp, index) => {
+        allPoints.push({
+          lat: opp.lat,
+          lng: opp.lng,
+          name: opp.name,
+          id: `opp-${opp.id || index}`,
+          type: 'opportunity'
+        });
+      });
+    }
+    // If a specific opportunity is selected (from clicking an opportunity tile) and NO country is selected
+    else if (opportunityMarkerState && opportunityMarkerState.lat && opportunityMarkerState.lng) {
+      allPoints.push({
+        lat: opportunityMarkerState.lat,
+        lng: opportunityMarkerState.lng,
+        name: opportunityMarkerState.name || 'Opportunity',
+        id: 'opportunity-marker',
+        type: 'opportunity'
+      });
+    }
     
-    const cityPoints = cities.map((city, index) => ({
-      lat: city.lat,
-      lng: city.lng,
-      name: city.name,
-      id: `${selectedCountry}-${index}` // uique id to prevent duplicates
-    }));
-    
-    //update points on change - labels removed to prevent overlap, use hover instead
+    // Update points - all are red opportunity markers
     globe
-      .pointsData(cityPoints) //show cities when country is selected
+      .pointsData(allPoints)
+      .pointColor(() => '#e53e3e') // Red for all opportunity markers
+      .pointRadius(0.3) // Thin red markers
       .labelsData([]); // Remove always-visible labels to prevent overlap
-  }, [selectedCountry]);
+  }, [selectedCountry, opportunityMarkerState, opportunities]);
 
   useEffect(() => {
     if (!globeInstanceRef.current) return;
@@ -857,88 +1061,23 @@ const GlobeComponent = ({ roomCode, isMaster, user }) => {
       <div ref={globeRef} style={{ width: "100%", height: "100%", cursor: "pointer" }} />
       
 
-      {/* Selected country display */}
+      {/* Selected country display - centered at top */}
       {selectedCountry && (
-        <>
-          <div
-            style={{
-              position: "absolute",
-              top: 20,
-              left: 20,
-              padding: "12px 20px",
-              background: "rgba(0, 0, 0, 0.9)",
-              color: "#FFD700",
-              borderRadius: "8px",
-              fontWeight: "bold",
-              fontSize: "20px",
-              boxShadow: "0 0 20px rgba(255, 215, 0, 0.5)",
-              border: "2px solid #FFD700",
-              zIndex: 1000,
-              textShadow: "0 0 10px rgba(255, 215, 0, 0.8)",
-            }}
-          >
-            ✨ {selectedCountry}
-          </div>
-          
-          {/* Cities list panel */}
-          {getCitiesForCountry(selectedCountry).length > 0 && (
-            <div
-              style={{
-                position: "absolute",
-                top: 80,
-                left: 20,
-                padding: "15px 20px",
-                background: "rgba(0, 0, 0, 0.85)",
-                borderRadius: "8px",
-                border: "1px solid rgba(255, 215, 0, 0.3)",
-                zIndex: 1000,
-                maxWidth: "250px",
-                maxHeight: "60vh",
-                overflowY: "auto",
-                boxShadow: "0 4px 20px rgba(0, 0, 0, 0.5)",
-              }}
-            >
-              <div
-                style={{
-                  color: "#FFD700",
-                  fontSize: "16px",
-                  fontWeight: "bold",
-                  marginBottom: "12px",
-                  borderBottom: "1px solid rgba(255, 215, 0, 0.3)",
-                  paddingBottom: "8px",
-                }}
-              >
-                Major Cities
-              </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                {getCitiesForCountry(selectedCountry).map((city, index) => (
-                  <div
-                    key={index}
-                    style={{
-                      color: "#fff",
-                      fontSize: "14px",
-                      padding: "6px 10px",
-                      background: "rgba(255, 215, 0, 0.1)",
-                      borderRadius: "4px",
-                      borderLeft: "3px solid #FFD700",
-                      transition: "all 0.2s",
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.background = "rgba(255, 215, 0, 0.2)";
-                      e.currentTarget.style.transform = "translateX(5px)";
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.background = "rgba(255, 215, 0, 0.1)";
-                      e.currentTarget.style.transform = "translateX(0)";
-                    }}
-                  >
-                    📍 {city.name}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </>
+        <div
+          style={{
+            position: "absolute",
+            top: 20,
+            left: "50%",
+            transform: "translateX(-50%)",
+            color: "#FFD700",
+            fontWeight: "bold",
+            fontSize: "20px",
+            zIndex: 1000,
+            textAlign: "center",
+          }}
+        >
+          {selectedCountry}
+        </div>
       )}
     </div>
   );

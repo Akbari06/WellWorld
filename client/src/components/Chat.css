@@ -1,16 +1,16 @@
 .chat-container {
   position: fixed;
-  left: 20px;
-  top: 80px; /* Below the header */
-  width: 320px;
-  height: calc(100vh - 100px);
-  background: rgba(255, 255, 255, 0.95);
-  border-radius: 12px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  left: 0;
+  top: 60px; /* Below the header */
+  width: 360px;
+  height: calc(100vh - 60px);
+  background: rgba(0, 0, 0, 0.85);
+  color: #fff;
+  box-shadow: 4px 0 15px rgba(0, 0, 0, 0.3);
+  z-index: 1000; /* Above globe, below header */
   display: flex;
   flex-direction: column;
-  z-index: 1000;
-  backdrop-filter: blur(10px);
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .chat-header {
