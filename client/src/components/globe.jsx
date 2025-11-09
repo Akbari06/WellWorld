@@ -11,7 +11,7 @@ const getCitiesForCountry = (countryName) => {
       { name: "Los Angeles", lat: 34.0522, lng: -118.2437 },
       { name: "Chicago", lat: 41.8781, lng: -87.6298 },
       { name: "Houston", lat: 29.7604, lng: -95.3698 }
-    ],
+    ], 
     "China": [
       { name: "Beijing", lat: 39.9042, lng: 116.4074 },
       { name: "Shanghai", lat: 31.2304, lng: 121.4737 },
@@ -419,7 +419,7 @@ const getCameraPositionForPoint = (lat, lng, radius) => {
   return new THREE.Vector3(-x, -y, -z);
 };
 
-const GlobeComponent = ({ roomCode, isMaster, user, opportunityMarker, opportunities = [], onCountrySelect }) => {
+const GlobeComponent = ({ roomCode, isMaster, user, opportunityMarker, opportunities = [], onCountrySelect, customGlobeImage }) => {
   const globeRef = useRef();
   const globeInstanceRef = useRef(null);
   const selectedCountryRef = useRef(null);
@@ -564,8 +564,11 @@ const GlobeComponent = ({ roomCode, isMaster, user, opportunityMarker, opportuni
       return;
     }
 
+    const defaultGlobeImage = "https://cdn.jsdelivr.net/npm/three-globe/example/img/earth-blue-marble.jpg";
+    const globeImage = customGlobeImage || defaultGlobeImage;
+    
     const globe = Globe()(globeRef.current)
-      .globeImageUrl("https://cdn.jsdelivr.net/npm/three-globe/example/img/earth-blue-marble.jpg")
+      .globeImageUrl(globeImage)
       .bumpImageUrl("https://cdn.jsdelivr.net/npm/three-globe/example/img/earth-topology.png")
       .backgroundImageUrl("https://cdn.jsdelivr.net/npm/three-globe/example/img/night-sky.png")
       .showAtmosphere(true)
@@ -713,6 +716,17 @@ const GlobeComponent = ({ roomCode, isMaster, user, opportunityMarker, opportuni
       }
     };
   }, [countriesData, loading, isMaster]); // Run when data is loaded or master status changes
+
+  // Update globe image when customGlobeImage changes
+  useEffect(() => {
+    if (!globeInstanceRef.current) return;
+    
+    const defaultGlobeImage = "https://cdn.jsdelivr.net/npm/three-globe/example/img/earth-blue-marble.jpg";
+    const globeImage = customGlobeImage || defaultGlobeImage;
+    
+    globeInstanceRef.current.globeImageUrl(globeImage);
+    console.log('Globe image updated to:', globeImage);
+  }, [customGlobeImage]);
 
   // Update controls when isMaster changes
   useEffect(() => {
