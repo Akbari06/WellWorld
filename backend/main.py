@@ -27,6 +27,16 @@ app.add_middleware(
 from routers.gemini.router import router as gemini_router  # import after app created
 app.include_router(gemini_router, prefix="/api/gemini", tags=["gemini"])
 
+# Mount the volunteering router (replaces the old "idealist" router)
+from routers.volunteering.router import router as volunteering_router
+# keep the same prefix if your frontend expects /api/idealist, or change to /api/volunteering
+# Here we'll use the same prefix used previously so no frontend changes are needed:
+app.include_router(volunteering_router, prefix="/api/idealist", tags=["volunteering"])
+
+from routers.gemini.idealist_to_geo import router as idealist_geo_router
+
+app.include_router(idealist_geo_router, prefix="/api/gemini", tags=["gemini"])
+
 
 @app.get("/", response_class=HTMLResponse)
 def root():
