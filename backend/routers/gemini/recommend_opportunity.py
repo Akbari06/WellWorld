@@ -3,7 +3,6 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
 import requests
-from bs4 import BeautifulSoup
 import logging
 import os
 import re
@@ -36,6 +35,7 @@ class RecommendRequest(BaseModel):
     room_code: str
     displayed_opportunities: Optional[List[OpportunityLink]] = None
     fetch_url: Optional[str] = None
+    opportunities_json: Optional[Dict[str, Any]] = None  # Full JSON from frontend
 
 
 class RecommendResponse(BaseModel):
@@ -104,6 +104,47 @@ def _is_worldai_recommendation(msg: str) -> bool:
     trimmed = str(msg).lstrip().lower()
     snippet = trimmed[:80]
     return "worldai recommendation" in snippet or "🤖 worldai recommendation" in snippet
+
+
+def fetch_room_selected_country(room_code: str) -> Optional[str]:
+    """
+    Fetch the selected country for the room_code from Supabase (server-side).
+    Returns the country name (lowercased) or None if not set.
+    """
+    if not supabase:
+        logger.info("Supabase client not configured; cannot fetch selected country.")
+        return None
+
+    try:
+        res = (
+            supabase.table("rooms")
+            .select("selected_country")
+            .eq("room_code", room_code)
+            .single()
+            .execute()
+        )
+        data = None
+        if isinstance(res, dict) and "data" in res:
+            data = res["data"]
+            error = res.get("error")
+        else:
+            data = getattr(res, "data", None)
+            error = getattr(res, "error", None)
+
+        if error:
+            logger.warning("Error fetching selected country from supabase: %s", error)
+            return None
+
+        if not data:
+            return None
+
+        selected_country = data.get("selected_country") if isinstance(data, dict) else getattr(data, "selected_country", None)
+        if selected_country and isinstance(selected_country, str):
+            return selected_country.lower().strip()
+        return None
+    except Exception as e:
+        logger.exception("Exception fetching selected country for room %s: %s", room_code, e)
+        return None
 
 
 def fetch_room_messages(room_code: str, limit_chars: int = 1200) -> str:
@@ -209,20 +250,31 @@ def fetch_from_frontend(url: str, timeout: int = 6) -> List[Dict[str, Any]]:
 async def recommend_opportunity(req: RecommendRequest):
     """
     Accepts:
-      - displayed_opportunities: array of up to 5 {id,name,link,country}
+      - displayed_opportunities: array of up to 5 {id,name,link,country} (preferred - current page)
+      OR
+      - opportunities_json: full JSON object from frontend (fallback)
       OR
       - fetch_url: URL the backend will GET to retrieve the list
 
     Workflow:
-      - Acquire OPPS (from body or fetch_url)
+      - Acquire OPPS (from displayed_opportunities, opportunities_json, or fetch_url)
       - Fetch USER_MESSAGES (from Supabase server-side)
       - Build system prompt that includes both variables (USER_MESSAGES and OPPS)
       - Call generate_response(system_prompt, prompt)
       - Return recommendation
     """
-    # Acquire OPPS
+    logger.info("=" * 80)
+    logger.info("🚀 RECOMMEND OPPORTUNITY ENDPOINT CALLED")
+    logger.info("Room code: %s", req.room_code)
+    logger.info("Supabase configured: %s", "YES" if supabase else "NO")
+    logger.info("=" * 80)
+    
+    # Acquire OPPS - prioritize displayed_opportunities (current page, up to 5)
     displayed: List[Dict[str, Any]] = []
+    OPPS_JSON = None
+    
     if req.displayed_opportunities and len(req.displayed_opportunities) > 0:
+        # Use the paginated opportunities (current page, up to 5)
         for o in req.displayed_opportunities[:5]:
             displayed.append(
                 {
@@ -232,7 +284,11 @@ async def recommend_opportunity(req: RecommendRequest):
                     "country": sanitize_text(getattr(o, "country", "") or "")[:120],
                 }
             )
-        logger.info("Using displayed_opportunities from request (count=%d)", len(displayed))
+        logger.info("Using displayed_opportunities from request (current page, count=%d)", len(displayed))
+    elif req.opportunities_json:
+        # Fallback: Use the full JSON from frontend
+        OPPS_JSON = req.opportunities_json
+        logger.info("Using opportunities_json from request (full JSON - fallback)")
     elif req.fetch_url:
         try:
             fetched = fetch_from_frontend(req.fetch_url)
@@ -242,10 +298,21 @@ async def recommend_opportunity(req: RecommendRequest):
             logger.exception("Failed to fetch displayed opportunities from fetch_url: %s", e)
             raise HTTPException(status_code=422, detail=f"Failed to fetch displayed opportunities from fetch_url: {e}")
     else:
-        raise HTTPException(status_code=400, detail="Either displayed_opportunities or fetch_url must be provided.")
+        raise HTTPException(status_code=400, detail="Either displayed_opportunities, opportunities_json, or fetch_url must be provided.")
 
-    if not displayed:
-        raise HTTPException(status_code=400, detail="No valid displayed opportunities found (after fetching/validation).")
+    if not displayed and not OPPS_JSON:
+        raise HTTPException(status_code=400, detail="No valid opportunities found (after fetching/validation).")
+
+    # Fetch selected country from room (for context in prompt)
+    selected_country = None
+    if supabase:
+        try:
+            selected_country = fetch_room_selected_country(req.room_code)
+            if selected_country:
+                logger.info("Fetched selected_country from DB: '%s' (room_code: %s)", selected_country, req.room_code)
+        except Exception as e:
+            logger.exception("Failed to fetch selected country: %s", e)
+            selected_country = None
 
     # Fetch USER_MESSAGES from Supabase (server-side)
     try:
@@ -256,10 +323,25 @@ async def recommend_opportunity(req: RecommendRequest):
         USER_MESSAGES = ""
 
     # Prepare OPPS variable (JSON string)
-    try:
-        OPPS = json.dumps(displayed, ensure_ascii=False, indent=0)
-    except Exception:
-        OPPS = str(displayed)
+    # Prioritize displayed opportunities (current page, up to 5)
+    if displayed:
+        try:
+            OPPS = json.dumps(displayed, ensure_ascii=False, indent=2)
+            logger.info("📤 Sending to Gemini - Current page opportunities (count=%d)", len(displayed))
+        except Exception:
+            OPPS = str(displayed)
+    elif OPPS_JSON:
+        try:
+            OPPS = json.dumps(OPPS_JSON, ensure_ascii=False, indent=2)
+            # Log what we're sending to Gemini
+            if isinstance(OPPS_JSON, dict):
+                keys_in_opps = list(OPPS_JSON.keys())
+                logger.info("📤 Sending to Gemini - JSON keys: %s (total opportunities: %d)", 
+                           keys_in_opps, sum(len(v) if isinstance(v, list) else 0 for v in OPPS_JSON.values()))
+        except Exception:
+            OPPS = str(OPPS_JSON)
+    else:
+        OPPS = "[]"
 
     # Compose system prompt and user prompt. We embed USER_MESSAGES and OPPS into the system prompt
     system_prompt_template = (
@@ -275,12 +357,18 @@ async def recommend_opportunity(req: RecommendRequest):
     user_messages_sanitized = sanitize_text(USER_MESSAGES)
     opps_sanitized = sanitize_text(OPPS)
 
+    # Build context about selected country if applicable
+    country_context = ""
+    if selected_country:
+        country_context = f"\n\nIMPORTANT: The user has selected the country '{selected_country.title()}'. Consider this when making your recommendation. "
+    
     system_prompt = (
         system_prompt_template
         + "\n\n"
-        + f"USER_MESSAGES: {user_messages_sanitized}\n\n"
-        + f"OPPS: {opps_sanitized}\n\n"
-        + "Use the USER_MESSAGES and OPPS variables to decide which single opportunity to recommend and why."
+        + f"The current opportunities the user is viewing (up to 5 from the current page): {opps_sanitized}\n\n"
+        + f"Also consider the past user conversation: {user_messages_sanitized}"
+        + country_context
+        + "\n\nUse the current opportunities and past user conversation to decide which single opportunity to recommend and why."
     )
 
     # Build a short user prompt that reiterates the task (the heavy context is in system_prompt)
@@ -296,7 +384,14 @@ async def recommend_opportunity(req: RecommendRequest):
         if isinstance(recommendation, str):
             recommendation = sanitize_text(recommendation)
         logger.info("Received recommendation (len=%d)", len(recommendation) if recommendation else 0)
-        return RecommendResponse(recommendation=recommendation, analyzed_count=len(displayed))
+        # Count opportunities: prioritize displayed (current page), otherwise count from full JSON
+        if displayed:
+            opp_count = len(displayed)
+        elif OPPS_JSON and isinstance(OPPS_JSON, dict):
+            opp_count = sum(len(v) if isinstance(v, list) else 0 for v in OPPS_JSON.values())
+        else:
+            opp_count = 0
+        return RecommendResponse(recommendation=recommendation, analyzed_count=opp_count)
     except Exception as e:
         logger.exception("Error generating recommendation: %s", e)
         raise HTTPException(status_code=502, detail="Failed to generate recommendation from Gemini.")
