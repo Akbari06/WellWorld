@@ -1,4 +1,4 @@
-# WellWorld - Global Volunteering Platform
+# 🌍 WellWorld
 
 WellWorld is an interactive platform that connects volunteers with global opportunities while providing AI-powered recommendations and real-time collaboration features. The platform features an interactive 3D globe visualization, chat functionality, and smart opportunity matching powered by Google's Gemini AI.
 
@@ -12,155 +12,173 @@ WellWorld is an interactive platform that connects volunteers with global opport
 
 **Challenges.** Time zones, rate limits, and globe performance kept biting us; the biggest hurdle was smoothing latency so that cross-continent collaborators stayed in sync while Gemini suggestions arrived fast enough to feel like a teammate.
 
-## Features
+## ✨ Key Features
 
-- **Interactive 3D Globe:** Visualize volunteering opportunities worldwide
-- **Real-time Chat:** Collaborate with other volunteers in planning rooms
-- **AI Assistant (WorldAI):** Get personalized volunteering recommendations
-- **Opportunity Browser:** Browse and filter volunteering opportunities
-- **Location-based Mapping:** See opportunities mapped to their geographic locations
-- **Collaborative Planning:** Create and join planning rooms for group coordination
+🌐 **Interactive 3D Globe:** Visualize volunteering opportunities worldwide with an immersive Three.js-based globe
 
-## Tech Stack
+💬 **Real-time Chat:** Collaborate with other volunteers in planning rooms with live messaging
 
-### Frontend
-- React.js
+🤖 **AI Assistant (WorldAI):** Get personalized volunteering recommendations powered by Google Gemini
+
+🔍 **Opportunity Browser:** Browse and filter volunteering opportunities by location, type, and requirements
+
+📍 **Location-based Mapping:** See opportunities mapped to their geographic locations on the 3D globe
+
+👥 **Collaborative Planning:** Create and join planning rooms for group coordination (up to 4 people per room)
+
+✈️ **Flight Route Visualization:** View flight routes from your nearest airport to volunteering destinations
+
+## 🛠️ Tech Stack
+
+**Frontend:**
+- React.js with React Router
 - Globe.gl (Three.js-based 3D visualization)
 - Supabase Client (Authentication & Real-time features)
-- React Router (Navigation)
 - Modern CSS (Flexbox & Grid layouts)
 
-### Backend
+**Backend:**
 - Python FastAPI
-- Google Gemini AI
+- Google Gemini AI (for recommendations and analysis)
+- Google Maps API (for airport finding and flight routes)
 - Supabase (Database & Auth)
 - Uvicorn (ASGI Server)
 
-## Getting Started
+## 🧠 How It Works
+
+1. **User Authentication:** Users sign up/login via Supabase authentication
+2. **Room Creation:** Users create or join planning rooms with unique 6-digit codes
+3. **Country Selection:** Master user selects a country on the interactive 3D globe
+4. **Opportunity Discovery:** System fetches volunteering opportunities from Idealist.org for the selected country
+5. **AI Recommendations:** Gemini AI analyzes opportunities and provides personalized recommendations
+6. **Collaborative Voting:** Room participants vote on opportunities they're interested in
+7. **Final Selection:** System determines the final destination based on group consensus
+8. **Route Planning:** Flight routes are calculated from user's location to the selected opportunity
+
+## 🚀 Getting Started
 
 ### Prerequisites
-- Node.js 18 or higher
+
+- Node.js 18.x or later
 - Python 3.8 or higher
 - npm or yarn
 - pip (Python package manager)
+- API keys for:
+  - Google Gemini
+  - Google Maps
+  - Supabase
 
-### Installation Steps
+### Installation
 
-1. **Navigate to the backend directory:**
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/your-username/wellworld.git
+   cd wellworld
+   ```
+
+2. **Install frontend dependencies**
+   ```bash
+   cd client
+   npm install
+   cd ..
+   ```
+
+3. **Set up Python backend**
    ```bash
    cd backend
-   ```
-
-2. **Create a virtual environment (recommended):**
-   ```bash
    python -m venv venv
-   ```
-
-3. **Activate the virtual environment:**
-   - On Windows:
-     ```bash
-     venv\Scripts\activate
-     ```
-   - On macOS/Linux:
-     ```bash
-     source venv/bin/activate
-     ```
-
-4. **Install dependencies:**
-   ```bash
+   
+   # On macOS/Linux:
+   source venv/bin/activate
+   
+   # On Windows:
+   venv\Scripts\activate
+   
    pip install -r ../requirements.txt
-   ```
-   Or if you're in the root directory:
-   ```bash
-   pip install -r requirements.txt
+   cd ..
    ```
 
-5. **Create a `.env` file in the `backend` directory:**
+4. **Create environment files**
+   
+   Create `backend/.env`:
    ```bash
-   # backend/.env
-   GEMINI_API_KEY=your_gemini_api_key_here
-   GMAPS_API_KEY=your_google_maps_api_key_here
+   GEMINI_API_KEY=your-gemini-api-key
+   GMAPS_API_KEY=your-google-maps-api-key
    ```
    
-   You can get your API keys from:
+   Create `client/.env`:
+   ```bash
+   REACT_APP_SUPABASE_URL=your-supabase-url
+   REACT_APP_SUPABASE_ANON_KEY=your-supabase-anon-key
+   ```
+   
+   Get your API keys from:
    - Gemini API key: https://makersuite.google.com/app/apikey
    - Google Maps API key: https://console.cloud.google.com/google/maps-apis/credentials
+   - Supabase: https://supabase.com
 
-6. **Run the backend server:**
-   ```bash
-   uvicorn main:app --reload --host 0.0.0.0 --port 8000
-   ```
+5. **Start the development servers**
    
-   Or from the root directory:
+   Backend (from root directory):
    ```bash
    uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000
    ```
+   
+   Frontend (in a new terminal):
+   ```bash
+   cd client
+   npm start
+   ```
 
-### Backend Server Details
+6. **Open your browser**
+   
+   - Frontend: http://localhost:3000
+   - Backend API Docs: http://localhost:8000/docs
 
-- **Default URL:** http://localhost:8000
-- **API Documentation:** http://localhost:8000/docs (Swagger UI)
-- **Alternative Docs:** http://localhost:8000/redoc (ReDoc)
-
-### Environment Variables
-
-- `GEMINI_API_KEY` (required): Your Google Gemini API key
-- `GMAPS_API_KEY` (required): Your Google Maps API key (for flight routing features)
-- `GEMINI_FAST_MODEL` (optional): Override the default model (default: `gemini-2.5-flash`)
-- `FRONTEND_ORIGINS` (optional): Comma-separated list of allowed frontend origins (default: `http://localhost:3000`)
-
-### Project Structure
+## 📁 Project Structure
 
 ```
 ├── backend/                 # Python FastAPI backend
-│   ├── gemini/             # Gemini AI integration
 │   ├── routers/            # API route handlers
+│   │   ├── gemini/         # Gemini AI integration
+│   │   ├── gmap/           # Google Maps integration
+│   │   └── volunteering/   # Volunteering opportunity routes
 │   ├── utils/              # Utility functions
 │   └── main.py            # Main application entry
 ├── client/                 # React frontend
 │   ├── public/            # Static files
 │   └── src/
-│       ├── components/    # React components
+│       ├── components/    # React components (Globe, Chat, etc.)
 │       ├── pages/         # Page components
 │       └── lib/           # Utility functions
 └── requirements.txt       # Python dependencies
 ```
 
-## API Documentation
+## 🔧 Environment Variables
+
+### Backend (`backend/.env`)
+- `GEMINI_API_KEY` (required): Your Google Gemini API key
+- `GMAPS_API_KEY` (required): Your Google Maps API key
+- `GEMINI_FAST_MODEL` (optional): Override default model (default: `gemini-2.5-flash`)
+- `FRONTEND_ORIGINS` (optional): Comma-separated list of allowed origins (default: `http://localhost:3000`)
+
+### Frontend (`client/.env`)
+- `REACT_APP_SUPABASE_URL` (required): Your Supabase project URL
+- `REACT_APP_SUPABASE_ANON_KEY` (required): Your Supabase anonymous key
+
+## 📚 API Documentation
 
 - **Swagger UI:** http://localhost:8000/docs
 - **ReDoc:** http://localhost:8000/redoc
 
-## Environment Variables
-
-### Frontend (.env)
-- `REACT_APP_SUPABASE_URL`: Your Supabase project URL
-- `REACT_APP_SUPABASE_ANON_KEY`: Your Supabase anonymous key
-
-### Backend (.env)
-- `GEMINI_API_KEY`: Your Google Gemini API key
-- `GEMINI_FAST_MODEL` (optional): Override default Gemini model
-- `FRONTEND_ORIGINS` (optional): Allowed frontend origins
-
-## Development
-
-### Running Tests
-- Frontend: `cd client && npm test`
-- Backend: `cd backend && pytest`
-
-### Building for Production
-- Frontend: `cd client && npm run build`
-- Backend: Ensure production-ready WSGI server (e.g., Gunicorn)
-
-### Troubleshooting
+## 🐛 Troubleshooting
 
 - **Import errors:** Make sure all dependencies are installed: `pip install -r requirements.txt`
-- **GEMINI_API_KEY error:** Ensure your `.env` file exists in the `backend` directory and contains a valid API key
+- **API key errors:** Ensure your `.env` files exist and contain valid API keys
 - **Port already in use:** Change the port with `--port 8001` or kill the process using port 8000
-- **Frontend build issues:** Clear npm cache and node_modules: `rm -rf node_modules && npm install`
+- **Frontend build issues:** Clear npm cache: `rm -rf node_modules && npm install`
 - **Supabase connection issues:** Verify environment variables and network connectivity
 
-## Contributing
+## 🤝 Contributing
 
 1. Fork the repository
 2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
@@ -168,12 +186,13 @@ WellWorld is an interactive platform that connects volunteers with global opport
 4. Push to the branch (`git push origin feature/AmazingFeature`)
 5. Open a Pull Request
 
-## License
+## 📄 License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
 
-## Acknowledgments
+## 🙏 Acknowledgments
 
 - Globe visualization powered by [Globe.gl](https://globe.gl)
 - AI features powered by [Google Gemini](https://deepmind.google/technologies/gemini/)
 - Real-time features powered by [Supabase](https://supabase.com)
+- Volunteering opportunities from [Idealist.org](https://www.idealist.org)

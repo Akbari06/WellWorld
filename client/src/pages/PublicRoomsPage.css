@@ -1,7 +1,8 @@
 .public-rooms-page {
   min-height: 100vh;
-  background: #f7fafc;
+  background: radial-gradient(circle at 20% 20%, #101727, #05060a);
   padding: 20px;
+  color: #f8fafc;
 }
 
 .public-rooms-container {
@@ -19,22 +20,24 @@
 .page-title {
   font-size: 36px;
   font-weight: bold;
-  color: #333;
+  color: #f8fafc;
 }
 
 .loading {
   text-align: center;
   padding: 48px;
   font-size: 18px;
-  color: #666;
+  color: #cbd5e1;
 }
 
 .empty-state {
   text-align: center;
   padding: 48px;
-  background: white;
+  background: rgba(6, 8, 18, 0.9);
   border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 8px rgba(124, 58, 237, 0.2);
+  border: 1px solid rgba(124, 58, 237, 0.2);
+  color: #cbd5e1;
 }
 
 .rooms-list {
@@ -43,10 +46,11 @@
 }
 
 .room-card {
-  background: white;
+  background: rgba(6, 8, 18, 0.9);
   border-radius: 12px;
   padding: 24px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 8px rgba(124, 58, 237, 0.2);
+  border: 1px solid rgba(124, 58, 237, 0.2);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -55,7 +59,8 @@
 
 .room-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 12px rgba(124, 58, 237, 0.35);
+  border-color: rgba(124, 58, 237, 0.4);
 }
 
 .room-info {
@@ -72,44 +77,44 @@
 .room-name {
   font-size: 20px;
   font-weight: bold;
-  color: #333;
+  color: #f8fafc;
   margin: 0;
   flex: 1;
 }
 
 .room-code {
   font-size: 14px;
-  color: #666;
+  color: #cbd5e1;
   font-family: monospace;
   margin-bottom: 4px;
 }
 
 .room-meta {
   font-size: 14px;
-  color: #999;
+  color: #94a3b8;
 }
 
 .room-creator {
-  color: #666;
+  color: #cbd5e1;
 }
 
 .creator-name {
   font-weight: 600;
-  color: #667eea;
+  color: #7c3aed;
 }
 
 .room-description {
   margin-top: 12px;
   padding: 12px;
-  background: #f0f4f8;
-  border-left: 3px solid #667eea;
+  background: rgba(15, 18, 35, 0.8);
+  border-left: 3px solid #7c3aed;
   border-radius: 4px;
 }
 
 .room-description p {
   margin: 0;
   font-size: 14px;
-  color: #4a5568;
+  color: #cbd5e1;
   line-height: 1.5;
 }
 
@@ -118,7 +123,7 @@
   border: none;
   cursor: pointer;
   padding: 4px 8px;
-  color: #718096;
+  color: #94a3b8;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -128,8 +133,8 @@
 }
 
 .btn-dots:hover {
-  background: #e2e8f0;
-  color: #4a5568;
+  background: rgba(124, 58, 237, 0.2);
+  color: #7c3aed;
 }
 
 .btn-dots svg {
@@ -142,11 +147,12 @@
 }
 
 .error-message {
-  background: #fed7d7;
-  color: #c53030;
+  background: rgba(248, 113, 113, 0.15);
+  color: #fca5a5;
   padding: 12px;
   border-radius: 8px;
   margin-bottom: 16px;
   font-size: 14px;
+  border: 1px solid rgba(248, 113, 113, 0.3);
 }
 

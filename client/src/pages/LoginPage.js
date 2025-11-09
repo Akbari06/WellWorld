@@ -69,7 +69,7 @@ const LoginPage = () => {
     <div className="login-page">
       <div className="login-container">
         <div className="login-logo">
-          <span className="login-logo-mark">WW</span>
+          <img className="login-logo-mark" src="/favicon.ico" alt="WellWorld Logo" />
           <div className="login-logo-text">
             <h1 className="login-title">WellWorld</h1>
             <p className="login-tagline">Wellbeing through Social Good</p>

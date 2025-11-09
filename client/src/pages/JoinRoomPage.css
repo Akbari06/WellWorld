@@ -3,7 +3,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: radial-gradient(circle at 10% 20%, #c7f9cc 0%, #e8fcec 45%, #f4fff5 100%);
+  background: radial-gradient(circle at 20% 20%, #101727, #05060a);
   padding: 40px;
   position: relative;
   overflow: hidden;
@@ -23,13 +23,13 @@
 }
 
 .join-room-page::before {
-  background: rgba(16, 185, 129, 0.5);
+  background: rgba(124, 58, 237, 0.4);
   top: -100px;
   left: -60px;
 }
 
 .join-room-page::after {
-  background: rgba(45, 212, 191, 0.4);
+  background: rgba(139, 92, 246, 0.35);
   bottom: -80px;
   right: -40px;
 }
@@ -40,7 +40,7 @@
   height: 220px;
   top: 50px;
   right: 120px;
-  background: radial-gradient(circle at 30% 30%, rgba(134, 239, 172, 0.45), rgba(15, 118, 110, 0.25));
+  background: radial-gradient(circle at 30% 30%, rgba(124, 58, 237, 0.35), rgba(91, 33, 182, 0.25));
   border-radius: 40% 60% 50% 50%;
   transform: rotate(-12deg);
   filter: blur(20px);
@@ -50,13 +50,13 @@
 .join-room-container {
   position: relative;
   z-index: 1;
-  background: rgba(255, 255, 255, 0.96);
+  background: rgba(6, 8, 18, 0.9);
   border-radius: 40px;
   padding: 64px 72px 52px;
-  border: 1px solid rgba(15, 118, 110, 0.15);
+  border: 1px solid rgba(124, 58, 237, 0.2);
   box-shadow:
-    0 45px 90px rgba(6, 78, 59, 0.18),
-    inset 0 1px 0 rgba(255, 255, 255, 0.5);
+    0 45px 90px rgba(124, 58, 237, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
   max-width: 540px;
   width: 100%;
   text-align: center;
@@ -74,14 +74,9 @@
   width: 64px;
   height: 64px;
   border-radius: 20px;
-  background: linear-gradient(135deg, #10b981, #059669);
-  color: #f0fdf4;
-  font-weight: 700;
-  font-size: 22px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 18px 30px rgba(5, 150, 105, 0.35);
+  box-shadow: 0 18px 30px rgba(124, 58, 237, 0.35);
+  object-fit: contain;
+  padding: 12px;
 }
 
 .join-room-logo-text {
@@ -91,7 +86,7 @@
 .join-room-tagline {
   margin: 0;
   font-size: 14px;
-  color: #4c7a67;
+  color: #cbd5e1;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -99,14 +94,14 @@
 .page-title {
   font-size: clamp(2.5rem, 5vw, 3rem);
   font-weight: 700;
-  color: #064e3b;
+  color: #f8fafc;
   margin: 0;
   letter-spacing: 0.04em;
 }
 
 .page-subtitle {
   font-size: 1.05rem;
-  color: #4c7a67;
+  color: #cbd5e1;
   margin-bottom: 36px;
 }
 
@@ -121,20 +116,20 @@
   font-size: 24px;
   text-align: center;
   letter-spacing: 8px;
-  border: 1.5px solid rgba(15, 118, 110, 0.25);
+  border: 1.5px solid rgba(124, 58, 237, 0.3);
   border-radius: 18px;
   transition: border-color 0.2s, box-shadow 0.2s;
-  background: rgba(255, 255, 255, 0.85);
-  color: #064e3b;
+  background: rgba(15, 18, 35, 0.8);
+  color: #f8fafc;
   font-weight: bold;
   text-transform: uppercase;
 }
 
 .room-code-input:focus {
   outline: none;
-  border-color: #10b981;
-  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
-  background: #fff;
+  border-color: #7c3aed;
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.2);
+  background: rgba(15, 18, 35, 0.95);
 }
 
 .join-room-container .btn.btn-primary {
@@ -144,15 +139,16 @@
   padding: 16px;
   font-size: 18px;
   font-weight: 600;
-  background: linear-gradient(120deg, #34d399, #059669);
-  color: #f0fdf4;
-  box-shadow: 0 20px 40px rgba(5, 150, 105, 0.35);
+  background: linear-gradient(120deg, #5b21b6, #7c3aed);
+  color: #f8fafc;
+  box-shadow: 0 20px 40px rgba(124, 58, 237, 0.35);
   transition: transform 0.2s, box-shadow 0.2s;
 }
 
 .join-room-container .btn.btn-primary:hover:not(:disabled) {
   transform: translateY(-3px);
-  box-shadow: 0 30px 45px rgba(5, 150, 105, 0.4);
+  box-shadow: 0 30px 45px rgba(124, 58, 237, 0.45);
+  background: linear-gradient(120deg, #6d28d9, #8b5cf6);
 }
 
 .join-room-container .btn.btn-primary:disabled {
@@ -164,7 +160,7 @@
 .btn-link {
   background: transparent;
   border: none;
-  color: #059669;
+  color: #7c3aed;
   text-decoration: underline;
   cursor: pointer;
   padding: 8px;
@@ -174,7 +170,7 @@
 }
 
 .btn-link:hover {
-  color: #047857;
+  color: #8b5cf6;
 }
 
 .error-message {

@@ -414,7 +414,7 @@ const LandingPage = ({ user }) => {
         <header className="landing-nav">
           <div className="brand-cluster">
             <div className="brand-mark">
-              <span>WW</span>
+              <img src="/favicon.ico" alt="WellWorld Logo" />
             </div>
             <div className="brand-copy">
               <span className="brand-name">WellWorld</span>
