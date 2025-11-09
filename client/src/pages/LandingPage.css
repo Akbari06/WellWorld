@@ -201,6 +201,10 @@
   font-weight: 500;
 }
 
+.landing-page.dark .profile-email {
+  color: #f8fafc;
+}
+
 .btn-profile-signout {
   padding: 6px 14px;
   font-size: 13px;
@@ -211,6 +215,11 @@
   font-weight: 600;
   cursor: pointer;
   transition: color 0.2s, border-color 0.2s;
+}
+
+.landing-page.dark .btn-profile-signout {
+  color: #f8fafc;
+  border-color: rgba(248, 250, 252, 0.3);
 }
 
 .btn-profile-signout:hover {
