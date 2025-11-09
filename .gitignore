@@ -2,3 +2,10 @@
 .env
 
 .venv/
+node_modules/
+package-lock.json
+.next/
+.DS_Store
+*.log
+.vscode/
+next-env.d.ts
