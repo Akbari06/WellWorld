@@ -386,6 +386,49 @@ const OpportunitiesPanel = ({
     }
   };
 
+  const handleSelectThis = (opportunity, e) => {
+    e.stopPropagation(); // Prevent tile click
+    
+    // Show congrats message
+    alert(`Congratulations! You've selected "${opportunity.name}". The globe will reset to its default position.`);
+    
+    // Clear country selection first (this ensures the reset condition is met)
+    if (onCountrySelect) {
+      onCountrySelect(null);
+    }
+    
+    // First, ensure the opportunity marker is set (if not already set)
+    // This ensures that hadOpportunity will be true when we clear it, triggering the reset
+    if (onOpportunitySelect) {
+      onOpportunitySelect(opportunity.lat, opportunity.lng, opportunity.name);
+    }
+    
+    // Clear opportunity selection locally
+    setSelectedOpportunityId(null);
+    setShowAllOpportunities(true);
+    
+    // Clear opportunity marker from database (including country)
+    if (roomCode) {
+      supabase
+        .from('rooms')
+        .update({
+          selected_opportunity_lat: null,
+          selected_opportunity_lng: null,
+          selected_country: null,
+        })
+        .eq('room_code', roomCode);
+    }
+
+    // Now clear the globe marker after a short delay
+    // This ensures the opportunity marker was set first, so hadOpportunity will be true
+    // The globe reset requires both opportunity and country to be cleared
+    setTimeout(() => {
+      if (onOpportunitySelect) {
+        onOpportunitySelect(null, null, null);
+      }
+    }, 100);
+  };
+
   if (loading) {
     return (
       <div className="opportunities-panel">
@@ -453,11 +496,25 @@ const OpportunitiesPanel = ({
               >
                 <div className="opportunity-title">{opp.name}</div>
                 <div className="opportunity-country">{opp.country}</div>
-                {opp.link && (
-                  <a href={opp.link} target="_blank" rel="noopener noreferrer" className="opportunity-link" onClick={(e) => e.stopPropagation()}>
-                    Learn more →
-                  </a>
-                )}
+                <div className="opportunity-actions">
+                  {opp.link && (
+                    <a
+                      href={opp.link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="opportunity-link"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      Learn more →
+                    </a>
+                  )}
+                  <button
+                    className="opportunity-select-button"
+                    onClick={(e) => handleSelectThis(opp, e)}
+                  >
+                    Select this
+                  </button>
+                </div>
               </div>
             ))}
 

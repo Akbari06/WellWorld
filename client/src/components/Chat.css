@@ -150,18 +150,20 @@
 }
 
 .ask-worldai-btn {
-  width: 100%;
-  padding: 12px 20px;
-  margin: 12px 18px 0;
-  font-size: 14px;
+  width: calc(100% - 36px); /* Adjust for margins */
+  max-width: 240px; /* Slightly wider */
+  padding: 10px 16px;
+  margin: 10px auto 0;
+  font-size: 13px;
   font-weight: 700;
   background: linear-gradient(135deg, #7c3aed, #2563eb);
   color: white;
   border: none;
-  border-radius: 12px;
+  border-radius: 10px;
   cursor: pointer;
   transition: transform 0.2s, box-shadow 0.2s;
   box-shadow: 0 12px 25px rgba(37, 99, 235, 0.35);
+  display: block; /* Center the button */
 }
 
 .ask-worldai-btn:hover:not(:disabled) {
