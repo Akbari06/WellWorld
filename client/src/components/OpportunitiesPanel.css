@@ -24,12 +24,12 @@
   font-size: 18px;
   font-weight: 700;
   letter-spacing: 0.06em;
-  color: #fcd34d;
+  color: #f8fafc;
 }
 
 .opportunities-count {
-  background: rgba(252, 211, 77, 0.15);
-  color: #fcd34d;
+  background: rgba(124, 58, 237, 0.12);
+  color: #e9d5ff;
   padding: 4px 8px;
   border-radius: 12px;
   font-size: 12px;
@@ -37,21 +37,20 @@
 }
 
 .back-button {
-  background: rgba(252, 211, 77, 0.15);
-  color: #fcd34d;
-  border: 1px solid rgba(252, 211, 77, 0.4);
-  padding: 6px 14px;
-  border-radius: 999px;
+  background: linear-gradient(120deg, #5b21b6, #7c3aed);
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 6px;
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.18s;
 }
 
 .back-button:hover {
-  background: rgba(252, 211, 77, 0.25);
-  border-color: #fcd34d;
-  transform: translateX(-2px);
+  background: linear-gradient(120deg, #6d28d9, #8b5cf6);
+  transform: translateX(-1px);
 }
 
 .loading-message,
@@ -112,15 +111,15 @@
 
 .opportunity-tile:hover {
   background: rgba(255, 255, 255, 0.12);
-  border-color: rgba(252, 211, 77, 0.7);
+  border-color: rgba(124, 58, 237, 0.7);
   transform: translateY(-2px);
-  box-shadow: 0 15px 30px rgba(252, 211, 77, 0.2);
+  box-shadow: 0 15px 30px rgba(124, 58, 237, 0.18);
 }
 
 .opportunity-tile.selected {
-  background: rgba(252, 211, 77, 0.2);
-  border-color: #fcd34d;
-  box-shadow: 0 20px 30px rgba(252, 211, 77, 0.35);
+  background: rgba(124, 58, 237, 0.18);
+  border-color: #7c3aed;
+  box-shadow: 0 20px 30px rgba(124, 58, 237, 0.28);
 }
 
 .tile-title,
@@ -146,21 +145,22 @@
 .tile-link,
 .opportunity-link {
   display: inline-block;
-  padding: 6px 14px;
-  background: #fcd34d;
-  color: #111;
-  border-radius: 999px;
+  margin-top: 8px;
+  padding: 6px 12px;
+  background: linear-gradient(120deg, #5b21b6, #7c3aed);
+  color: white;
+  border-radius: 6px;
   text-decoration: none;
   font-size: 13px;
   font-weight: 600;
-  transition: background 0.2s;
-  border: none;
-  cursor: pointer;
+  align-self: flex-start;
+  transition: background 0.18s, transform 0.18s;
 }
 
 .tile-link:hover,
 .opportunity-link:hover {
-  background: #fbbf24;
+  background: linear-gradient(120deg, #6d28d9, #8b5cf6);
+  transform: translateY(-1px);
 }
 
 .opportunity-select-button {
@@ -193,21 +193,20 @@
 }
 
 .pagination-button {
-  background: rgba(252, 211, 77, 0.15);
-  color: #fcd34d;
-  border: 1px solid rgba(252, 211, 77, 0.4);
-  padding: 8px 16px;
+  background: linear-gradient(120deg, #5b21b6, #7c3aed);
+  color: white;
+  border: none;
+  padding: 6px 12px;
   border-radius: 8px;
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.18s;
   flex: 0 0 auto;
 }
 
 .pagination-button:hover:not(:disabled) {
-  background: rgba(252, 211, 77, 0.25);
-  border-color: #fcd34d;
+  background: linear-gradient(120deg, #6d28d9, #8b5cf6);
   transform: translateY(-1px);
 }
 
