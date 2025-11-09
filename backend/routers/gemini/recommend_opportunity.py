@@ -1,3 +1,4 @@
+# recommend_opportunity.py
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
@@ -6,18 +7,20 @@ from bs4 import BeautifulSoup
 import logging
 import os
 import re
+import json
 
-# supabase client (server-side)
+# server-side supabase client (optional; set env vars to enable DB chat fetch)
 try:
     from supabase import create_client  # supabase-py
 except Exception:
     create_client = None
 
-# your Gemini wrapper
+# Gemini wrapper (mock or real) - see gemini/call_gemini.py
 from gemini.call_gemini import generate_response
 
 router = APIRouter()
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("recommend_opportunity")
+logger.setLevel(os.getenv("LOG_LEVEL", "INFO"))
 
 # -----------------------
 # Pydantic models
@@ -31,7 +34,8 @@ class OpportunityLink(BaseModel):
 
 class RecommendRequest(BaseModel):
     room_code: str
-    displayed_opportunities: List[OpportunityLink]  # front-end should send the currently displayed (paginated) opps
+    displayed_opportunities: Optional[List[OpportunityLink]] = None
+    fetch_url: Optional[str] = None
 
 
 class RecommendResponse(BaseModel):
@@ -40,10 +44,9 @@ class RecommendResponse(BaseModel):
 
 
 # -----------------------
-# Supabase client init
+# Supabase client init (server-side)
 # -----------------------
 SUPABASE_URL = os.getenv("SUPABASE_URL")
-# prefer service role key on server, fall back to anon / generic key
 SUPABASE_KEY = (
     os.getenv("SUPABASE_SERVICE_ROLE_KEY")
     or os.getenv("SUPABASE_KEY")
@@ -54,36 +57,33 @@ supabase = None
 if create_client and SUPABASE_URL and SUPABASE_KEY:
     try:
         supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
-        logger.info("Supabase client initialized for fetching messages.")
+        logger.info("Supabase client initialized for server-side message fetching.")
     except Exception as e:
         supabase = None
         logger.warning(f"Failed to initialize Supabase client: {e}")
 else:
-    logger.warning("Supabase client not configured (missing env vars or supabase package).")
+    logger.info("Supabase client not configured on server; message fetching disabled.")
 
 
 # -----------------------
 # Helpers: sanitization & truncation
 # -----------------------
-# Remove control characters
 _control_re = re.compile(r"[\x00-\x1F\x7F]+")
-# Remove astral-plane emoji (some emoji live above U+10000)
-_emoji_re = re.compile(r"[\U00010000-\U0010ffff]", flags=re.UNICODE)
+try:
+    _emoji_re = re.compile(r"[\U00010000-\U0010ffff]", flags=re.UNICODE)
+except re.error:
+    _emoji_re = re.compile(r"[^\x00-\x7F]+")
 
 
 def sanitize_text(s: Optional[str]) -> str:
-    """Remove control characters and emoji and normalize whitespace."""
     if not s:
         return ""
-    # Ensure string
     s = str(s)
     s = _control_re.sub(" ", s)
     try:
         s = _emoji_re.sub("", s)
     except re.error:
-        # If the Python build doesn't support astral ranges, fall back to a looser removal:
         s = re.sub(r"[^\x00-\x7F]+", " ", s)
-    # collapse whitespace
     s = re.sub(r"\s+", " ", s).strip()
     return s
 
@@ -96,102 +96,9 @@ def trunc(s: Optional[str], n: int) -> str:
 
 
 # -----------------------
-# HTML description extraction
-# -----------------------
-def extract_description_section(html_content: str) -> Dict[str, Any]:
-    soup = BeautifulSoup(html_content, "html.parser")
-    description_data: Dict[str, Any] = {}
-
-    headings = soup.find_all(["h1", "h2", "h3", "h4", "h5", "h6", "strong", "b"])
-
-    for heading in headings:
-        text = heading.get_text(strip=True).lower()
-
-        def get_next_text(h):
-            content = h.find_next_sibling(["p", "div", "ul", "ol"])
-            if content:
-                return content.get_text(separator=" ", strip=True)
-            nxt = h.find_next(["p", "div", "span"])
-            if nxt:
-                return nxt.get_text(separator=" ", strip=True)
-            return None
-
-        if "available times" in text or "available time" in text or "availability" in text or text == "time":
-            val = get_next_text(heading)
-            if val:
-                description_data["available_times"] = sanitize_text(trunc(val, 300))
-
-        if "time commitment" in text:
-            val = get_next_text(heading)
-            if val:
-                description_data["time_commitment"] = sanitize_text(trunc(val, 300))
-
-        if "recurrence" in text or "recurring" in text:
-            val = get_next_text(heading)
-            if val:
-                description_data["recurrence"] = sanitize_text(trunc(val, 300))
-
-        if "cost" in text or "fee" in text:
-            val = get_next_text(heading)
-            if val:
-                description_data["cost"] = sanitize_text(trunc(val, 200))
-
-        if "cause areas" in text or "cause" in text:
-            val = get_next_text(heading)
-            if val:
-                description_data["cause_areas"] = sanitize_text(trunc(val, 300))
-
-        if "benefits" in text:
-            val = get_next_text(heading)
-            if val:
-                description_data["benefits"] = sanitize_text(trunc(val, 300))
-
-        if "good for" in text or "goodfor" in text:
-            val = get_next_text(heading)
-            if val:
-                description_data["good_for"] = sanitize_text(trunc(val, 300))
-
-    if not description_data:
-        main_content = (
-            soup.find("main")
-            or soup.find("article")
-            or soup.find("div", class_=lambda x: x and ("content" in x.lower() or "description" in x.lower()))
-            or soup.body
-        )
-        if main_content:
-            text = main_content.get_text(separator=" ", strip=True)
-            description_data["full_text"] = sanitize_text(trunc(text, 1200))
-
-    return description_data
-
-
-def fetch_opportunity_description(url: Optional[str]) -> Dict[str, Any]:
-    """
-    Fetch and extract description section from an opportunity URL.
-    If no URL provided, return an error note.
-    """
-    if not url:
-        return {"error": "No link provided"}
-
-    try:
-        headers = {
-            "User-Agent": "Mozilla/5.0 (compatible; OpportunitiesBot/1.0; +https://yourdomain.example)"
-        }
-        response = requests.get(url, headers=headers, timeout=10)
-        response.raise_for_status()
-        return extract_description_section(response.text)
-    except Exception as e:
-        logger.debug(f"Failed fetch for {url}: {e}")
-        return {"error": str(e)}
-
-
-# -----------------------
-# Supabase messages fetch + filter WorldAI messages
+# Fetch room messages from Supabase (sanitized, excludes bot recommendations)
 # -----------------------
 def _is_worldai_recommendation(msg: str) -> bool:
-    """
-    Returns True if the message appears to be a WorldAI recommendation (start of the message).
-    """
     if not msg:
         return False
     trimmed = str(msg).lstrip().lower()
@@ -201,15 +108,15 @@ def _is_worldai_recommendation(msg: str) -> bool:
 
 def fetch_room_messages(room_code: str, limit_chars: int = 1200) -> str:
     """
-    Returns concatenated messages for the room (ascending by timestamp),
-    truncated to limit_chars characters. Excludes messages that are WorldAI recommendations.
+    Fetch recent messages for the room_code from Supabase (server-side).
+    Returns a single sanitized string of limited length suitable to include in prompts.
+    If server supabase client is not configured, return empty string.
     """
     if not supabase:
-        logger.warning("Supabase client not available; skipping message fetch.")
+        logger.info("Supabase client not configured; returning empty chat context.")
         return ""
 
     try:
-        # supabase-py query
         res = (
             supabase.table("messages")
             .select("user_id, message, created_at")
@@ -217,8 +124,6 @@ def fetch_room_messages(room_code: str, limit_chars: int = 1200) -> str:
             .order("created_at", {"ascending": True})
             .execute()
         )
-
-        # Adapt to supabase response shapes
         data = None
         if isinstance(res, dict) and "data" in res:
             data = res["data"]
@@ -228,7 +133,7 @@ def fetch_room_messages(room_code: str, limit_chars: int = 1200) -> str:
             error = getattr(res, "error", None)
 
         if error:
-            logger.warning(f"Error fetching messages from supabase: {error}")
+            logger.warning("Error fetching messages from supabase: %s", error)
             return ""
 
         if not data:
@@ -238,14 +143,11 @@ def fetch_room_messages(room_code: str, limit_chars: int = 1200) -> str:
         total = 0
         for row in data:
             text = (row.get("message") if isinstance(row, dict) else getattr(row, "message", "")) or ""
-            # Exclude WorldAI messages
             if _is_worldai_recommendation(text):
-                logger.debug(f"Skipping WorldAI recommendation message in room {room_code}: {text[:80]!r}")
+                # skip prior WorldAI bot messages
                 continue
-
             user = (row.get("user_id") if isinstance(row, dict) else getattr(row, "user_id", "")) or ""
             ts = (row.get("created_at") if isinstance(row, dict) else getattr(row, "created_at", "")) or ""
-            # sanitize each piece
             sanitized_line = f"[{sanitize_text(ts)}] {sanitize_text(user)}: {sanitize_text(text)}"
             if total + len(sanitized_line) > limit_chars:
                 remaining = max(0, limit_chars - total)
@@ -257,8 +159,47 @@ def fetch_room_messages(room_code: str, limit_chars: int = 1200) -> str:
 
         return "\n".join(lines)
     except Exception as e:
-        logger.exception(f"Exception fetching messages for room {room_code}: {e}")
+        logger.exception("Exception fetching messages for room %s: %s", room_code, e)
         return ""
+
+
+# -----------------------
+# Fetch displayed opportunities from a frontend endpoint (optional)
+# -----------------------
+def fetch_from_frontend(url: str, timeout: int = 6) -> List[Dict[str, Any]]:
+    try:
+        resp = requests.get(url, timeout=timeout)
+        resp.raise_for_status()
+        payload = resp.json()
+        if isinstance(payload, dict) and "displayed_opportunities" in payload:
+            arr = payload["displayed_opportunities"]
+        elif isinstance(payload, list):
+            arr = payload
+        elif isinstance(payload, dict) and "opportunities" in payload:
+            arr = payload["opportunities"]
+        else:
+            raise ValueError("Unexpected JSON shape from frontend endpoint")
+        if not isinstance(arr, list):
+            raise ValueError("Frontend endpoint did not return a list")
+        normalized = []
+        for i, item in enumerate(arr):
+            if not isinstance(item, dict):
+                continue
+            name = item.get("name") or item.get("title")
+            if not name:
+                continue
+            normalized.append(
+                {
+                    "id": item.get("id") or f"fetched-{i}",
+                    "name": sanitize_text(name)[:300],
+                    "link": item.get("link") or item.get("url") or "",
+                    "country": sanitize_text(item.get("country") or item.get("location") or "")[:120],
+                }
+            )
+        return normalized
+    except Exception as e:
+        logger.exception("Failed to fetch or parse frontend URL %s: %s", url, e)
+        raise
 
 
 # -----------------------
@@ -267,116 +208,96 @@ def fetch_room_messages(room_code: str, limit_chars: int = 1200) -> str:
 @router.post("/recommend-opportunity", response_model=RecommendResponse)
 async def recommend_opportunity(req: RecommendRequest):
     """
-    Analyze the CURRENTLY DISPLAYED volunteering opportunities (provided by frontend)
-    and recommend the best one using Gemini AI. Also includes chat-room messages (context).
+    Accepts:
+      - displayed_opportunities: array of up to 5 {id,name,link,country}
+      OR
+      - fetch_url: URL the backend will GET to retrieve the list
+
+    Workflow:
+      - Acquire OPPS (from body or fetch_url)
+      - Fetch USER_MESSAGES (from Supabase server-side)
+      - Build system prompt that includes both variables (USER_MESSAGES and OPPS)
+      - Call generate_response(system_prompt, prompt)
+      - Return recommendation
     """
-    # Validate input
-    if not req.displayed_opportunities or len(req.displayed_opportunities) == 0:
-        raise HTTPException(
-            status_code=400,
-            detail="No displayed_opportunities provided. The frontend should send the currently visible paginated opportunities (up to 5).",
-        )
-
-    # Limit to first 5 (safety)
-    displayed = req.displayed_opportunities[:5]
-
-    # Fetch room messages (context) from Supabase (shorter default, sanitized)
-    chat_context = ""
-    try:
-        chat_context = fetch_room_messages(req.room_code, limit_chars=1200)
-    except Exception as e:
-        logger.warning(f"Unable to fetch messages for room {req.room_code}: {e}")
-        chat_context = ""
-
-    # Fetch descriptions only for the provided displayed opportunities
-    opportunity_data = []
-    for opp in displayed:
-        logger.info(f"Fetching description for displayed opportunity: {opp.name} ({opp.link})")
-        description = fetch_opportunity_description(opp.link)
-        # sanitize and truncate extracted fields before storing
-        if isinstance(description, dict):
-            sanitized_description = {}
-            for k, v in description.items():
-                sanitized_description[k] = sanitize_text(trunc(v, 400 if k == "full_text" else 300))
-        else:
-            sanitized_description = {"full_text": sanitize_text(trunc(str(description), 300))}
-        opportunity_data.append(
-            {
-                "id": opp.id,
-                "name": sanitize_text(trunc(opp.name, 200)),
-                "link": opp.link,
-                "country": sanitize_text(trunc(opp.country, 100)),
-                "description": sanitized_description,
-            }
-        )
-
-    # Build system prompt (unchanged guidance)
-    system_prompt = """You are an expert advisor for volunteering opportunities.
-Analyze the provided volunteering opportunities and recommend the best one based on practical criteria:
-- Available Times (when volunteers can participate)
-- Time Commitment (how much time is required)
-- Recurrence (one-time vs recurring)
-- Cost (any fees required)
-- Cause Areas (what causes they support)
-- Benefits (training, housing, language support, etc.)
-- Good For (who can participate: kids, teens, groups, etc.)
-
-Provide a clear, concise recommendation explaining why this opportunity is the best fit.
-Focus on practical considerations that help volunteers make informed decisions.
-When information is missing, be explicit about assumptions and what additional details you'd need.
-"""
-
-    # Build opportunities text for the user prompt (values already sanitized/truncated)
-    opportunities_text = ""
-    for i, opp_data in enumerate(opportunity_data, start=1):
-        opp_text = f"\n{i}. {opp_data['name']} ({opp_data.get('country')})\n"
-        opp_text += f"   Link: {opp_data.get('link')}\n"
-
-        desc = opp_data.get("description", {})
-        if isinstance(desc, dict) and "error" in desc:
-            opp_text += f"   Note: Could not fetch full description ({desc.get('error')})\n"
-        else:
-            if isinstance(desc, dict):
-                if "full_text" in desc:
-                    opp_text += f"   - Full Description: {desc['full_text'][:400]}...\n"
-                for key, value in desc.items():
-                    if key == "full_text":
-                        continue
-                    opp_text += f"   - {key.replace('_', ' ').title()}: {value[:300]}\n"
-
-        opportunities_text += opp_text
-
-    # Build user prompt including chat context
-    user_prompt = "Please analyze these volunteering opportunities and recommend the best one.\n\n"
-    if chat_context:
-        user_prompt += f"Chatroom context (recent messages from room `{req.room_code}`):\n{chat_context}\n\n"
+    # Acquire OPPS
+    displayed: List[Dict[str, Any]] = []
+    if req.displayed_opportunities and len(req.displayed_opportunities) > 0:
+        for o in req.displayed_opportunities[:5]:
+            displayed.append(
+                {
+                    "id": getattr(o, "id", None),
+                    "name": sanitize_text(getattr(o, "name", ""))[:300],
+                    "link": getattr(o, "link", "") or "",
+                    "country": sanitize_text(getattr(o, "country", "") or "")[:120],
+                }
+            )
+        logger.info("Using displayed_opportunities from request (count=%d)", len(displayed))
+    elif req.fetch_url:
+        try:
+            fetched = fetch_from_frontend(req.fetch_url)
+            displayed = fetched[:5]
+            logger.info("Fetched displayed opportunities from fetch_url (count=%d)", len(displayed))
+        except Exception as e:
+            logger.exception("Failed to fetch displayed opportunities from fetch_url: %s", e)
+            raise HTTPException(status_code=422, detail=f"Failed to fetch displayed opportunities from fetch_url: {e}")
     else:
-        user_prompt += "No chatroom messages available.\n\n"
+        raise HTTPException(status_code=400, detail="Either displayed_opportunities or fetch_url must be provided.")
 
-    user_prompt += f"Opportunities to analyze (only the ones currently displayed):\n{opportunities_text}\n\n"
-    user_prompt += "Based on the available information and chat context, which opportunity would you recommend and why? Consider the criteria from the system instructions. If key details are missing, say what you'd want to know.\n"
+    if not displayed:
+        raise HTTPException(status_code=400, detail="No valid displayed opportunities found (after fetching/validation).")
 
-    # Call Gemini with robust error logging and smaller prompt footprint
+    # Fetch USER_MESSAGES from Supabase (server-side)
     try:
-        recommendation = generate_response(system_prompt=system_prompt, prompt=user_prompt)
-        return RecommendResponse(recommendation=recommendation, analyzed_count=len(opportunity_data))
+        USER_MESSAGES = fetch_room_messages(req.room_code, limit_chars=1200)
+        logger.info("Fetched USER_MESSAGES (len=%d)", len(USER_MESSAGES))
     except Exception as e:
-        # If the wrapper used requests and raised an HTTPError, try to extract response
-        resp = getattr(e, "response", None)
-        body_snippet = None
-        status = None
-        if resp is not None:
-            try:
-                status = getattr(resp, "status_code", None)
-                body = getattr(resp, "text", None) or getattr(resp, "content", None) or ""
-                body_snippet = (body[:1000] + "...") if isinstance(body, str) and len(body) > 1000 else body
-            except Exception:
-                body_snippet = "<unable to read response body>"
-        logger.exception("Error generating recommendation (WorldAI/Gemini). status=%s body_snippet=%s err=%s", status, body_snippet, e)
-        detail_msg = f"Failed to generate recommendation."
-        if status:
-            detail_msg += f" External service status={status}."
-        if body_snippet:
-            detail_msg += f" External message: {body_snippet}"
-        # Return 502 (bad gateway) since upstream failed to process
-        raise HTTPException(status_code=502, detail=detail_msg)
+        logger.exception("Failed to fetch room messages: %s", e)
+        USER_MESSAGES = ""
+
+    # Prepare OPPS variable (JSON string)
+    try:
+        OPPS = json.dumps(displayed, ensure_ascii=False, indent=0)
+    except Exception:
+        OPPS = str(displayed)
+
+    # Compose system prompt and user prompt. We embed USER_MESSAGES and OPPS into the system prompt
+    system_prompt_template = (
+        "You are a concise volunteering advisor. Output exactly one short paragraph (no more than 50 words) "
+        "recommending the single best opportunity from the provided list. Start with the opportunity NAME, then a colon, "
+        "then a one-sentence reason. If user's chat messages indicate a preference (e.g., 'vegan'), prefer matching opportunity "
+        "and mention it in the reason. If essential details are missing, append a second very-short clause (<=15 words) saying what's missing. "
+        "Do NOT include bullet lists, emojis, or extra commentary. Keep the answer compact."
+    )
+
+    # Now embed variables
+    # WARNING: These inserts may be long. We sanitize to avoid control characters.
+    user_messages_sanitized = sanitize_text(USER_MESSAGES)
+    opps_sanitized = sanitize_text(OPPS)
+
+    system_prompt = (
+        system_prompt_template
+        + "\n\n"
+        + f"USER_MESSAGES: {user_messages_sanitized}\n\n"
+        + f"OPPS: {opps_sanitized}\n\n"
+        + "Use the USER_MESSAGES and OPPS variables to decide which single opportunity to recommend and why."
+    )
+
+    # Build a short user prompt that reiterates the task (the heavy context is in system_prompt)
+    user_prompt = "Question: Which single opportunity should this user pick, and why? Answer in one short paragraph ≤50 words."
+
+    logger.debug("System prompt length=%d", len(system_prompt))
+    logger.debug("User prompt length=%d", len(user_prompt))
+
+    # Call Gemini wrapper
+    try:
+        logger.info("Calling generate_response (Gemini wrapper)...")
+        recommendation = generate_response(system_prompt=system_prompt, prompt=user_prompt)
+        if isinstance(recommendation, str):
+            recommendation = sanitize_text(recommendation)
+        logger.info("Received recommendation (len=%d)", len(recommendation) if recommendation else 0)
+        return RecommendResponse(recommendation=recommendation, analyzed_count=len(displayed))
+    except Exception as e:
+        logger.exception("Error generating recommendation: %s", e)
+        raise HTTPException(status_code=502, detail="Failed to generate recommendation from Gemini.")
+
