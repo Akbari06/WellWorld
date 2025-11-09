@@ -430,6 +430,8 @@ const GlobeComponent = ({ roomCode, isMaster, user, opportunityMarker, opportuni
   const [countriesData, setCountriesData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [opportunityMarkerState, setOpportunityMarkerState] = useState(null);
+  const prevOpportunityMarkerRef = useRef(null);
+  const prevSelectedCountryRef = useRef(null);
 
   //keep refs in sync with props/state
   useEffect(() => {
@@ -731,9 +733,72 @@ const GlobeComponent = ({ roomCode, isMaster, user, opportunityMarker, opportuni
     const globe = globeInstanceRef.current;
     const controls = globe.controls();
     
-    if (!opportunityMarkerState || !opportunityMarkerState.lat || !opportunityMarkerState.lng) {
-      // No opportunity selected, resume auto-rotate if no country is selected
-      if (!selectedCountry) {
+    // Check if opportunity was just cleared (had one before, now don't)
+    const hadOpportunity = prevOpportunityMarkerRef.current && 
+                          prevOpportunityMarkerRef.current.lat && 
+                          prevOpportunityMarkerRef.current.lng;
+    const hasOpportunity = opportunityMarkerState && 
+                          opportunityMarkerState.lat && 
+                          opportunityMarkerState.lng;
+    
+    // Update ref for next render
+    prevOpportunityMarkerRef.current = opportunityMarkerState;
+    
+    if (!hasOpportunity) {
+      // No opportunity selected
+      // Only reset zoom if we had one before (just cleared)
+      if (hadOpportunity && !selectedCountry) {
+        controls.autoRotate = true;
+        
+        // Reset zoom to a moderate level (not fully zoomed out)
+        // Use pointOfView to reset to a default view with moderate zoom
+        if (typeof globe.pointOfView === 'function') {
+          try {
+            // Reset to center of globe with moderate zoom (altitude 1.8 = not too far out)
+            globe.pointOfView(
+              { lat: 0, lng: 0, altitude: 0.8 },
+              1500
+            );
+            console.log('Reset zoom to moderate level after clearing opportunity');
+          } catch (error) {
+            console.warn('Failed to reset zoom:', error);
+          }
+        } else {
+          // Manual reset: zoom out moderately
+          const camera = globe.camera();
+          const currentPos = camera.position.clone();
+          const currentRadius = currentPos.length();
+          // Increase radius by 20% to zoom out moderately (multiply by 1.2)
+          // But cap it so it doesn't go too far out
+          const targetRadius = Math.min(currentRadius * 1.2, 400);
+          const direction = currentPos.normalize();
+          const targetPos = direction.multiplyScalar(targetRadius);
+          
+          const startPos = currentPos.clone();
+          let startTime = Date.now();
+          const duration = 1500;
+          
+          const animate = () => {
+            const elapsed = Date.now() - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            
+            const eased = progress < 0.5
+              ? 4 * progress * progress * progress
+              : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+            
+            camera.position.lerpVectors(startPos, targetPos, eased);
+            camera.lookAt(0, 0, 0);
+            controls.update();
+            
+            if (progress < 1) {
+              requestAnimationFrame(animate);
+            }
+          };
+          
+          animate();
+        }
+      } else if (!selectedCountry) {
+        // Just resume auto-rotate if no opportunity and no country
         controls.autoRotate = true;
       }
       return;
@@ -751,10 +816,10 @@ const GlobeComponent = ({ roomCode, isMaster, user, opportunityMarker, opportuni
       if (typeof globe.pointOfView === 'function') {
         try {
           // pointOfView expects: { lat, lng, altitude } and duration
-          // altitude controls zoom level (higher = more zoomed out)
-          // Using a closer altitude to highlight the location better
+          // altitude controls zoom level (higher = more zoomed out, lower = more zoomed in)
+          // Using a lower altitude (1.2) to zoom in slightly towards the country
           globe.pointOfView(
-            { lat, lng, altitude: 2.0 },
+            { lat, lng, altitude: 0.4 },
             1500
           );
           console.log('Used pointOfView method for opportunity');
@@ -767,11 +832,14 @@ const GlobeComponent = ({ roomCode, isMaster, user, opportunityMarker, opportuni
       // Manual calculation fallback: get camera position to focus on the point
       const camera = globe.camera();
       const currentPos = camera.position.clone();
-      const radius = currentPos.length();
+      const baseRadius = currentPos.length();
+      // Reduce radius by 30% to zoom in (multiply by 0.7)
+      const radius = baseRadius * 0.7;
       
       console.log('Manual pan calculation:', { 
         currentPos: { x: currentPos.x, y: currentPos.y, z: currentPos.z },
-        radius 
+        baseRadius,
+        zoomedRadius: radius
       });
       
       // Calculate target camera position (opposite the point on globe)
@@ -823,14 +891,73 @@ const GlobeComponent = ({ roomCode, isMaster, user, opportunityMarker, opportuni
     }
     
     if (!selectedCountry) {
-      console.log('No selected country, resetting auto-rotate');
-      const controls = globeInstanceRef.current.controls();
-      // Only reset auto-rotate if no opportunity is selected
-      if (!opportunityMarkerState) {
+      console.log('No selected country, resetting zoom and auto-rotate');
+      const globe = globeInstanceRef.current;
+      const controls = globe.controls();
+      
+      // Check if country was just deselected (had one before, now don't)
+      const hadCountry = prevSelectedCountryRef.current !== null;
+      
+      // Only reset zoom if we had a country before (just deselected) and no opportunity is selected
+      if (hadCountry && !opportunityMarkerState) {
+        controls.autoRotate = true;
+        
+        // Zoom out to moderate level (altitude 1.7)
+        if (typeof globe.pointOfView === 'function') {
+          try {
+            globe.pointOfView(
+              { lat: 0, lng: 0, altitude: 1.7 },
+              1500
+            );
+            console.log('Reset zoom to 1.7 after deselecting country');
+          } catch (error) {
+            console.warn('Failed to reset zoom:', error);
+          }
+        } else {
+          // Manual reset: zoom out to moderate level
+          const camera = globe.camera();
+          const currentPos = camera.position.clone();
+          const currentRadius = currentPos.length();
+          // Increase radius to match altitude 1.7 (approximately 1.3x)
+          const targetRadius = Math.min(currentRadius * 1.3, 450);
+          const direction = currentPos.normalize();
+          const targetPos = direction.multiplyScalar(targetRadius);
+          
+          const startPos = currentPos.clone();
+          let startTime = Date.now();
+          const duration = 1500;
+          
+          const animate = () => {
+            const elapsed = Date.now() - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            
+            const eased = progress < 0.5
+              ? 4 * progress * progress * progress
+              : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+            
+            camera.position.lerpVectors(startPos, targetPos, eased);
+            camera.lookAt(0, 0, 0);
+            controls.update();
+            
+            if (progress < 1) {
+              requestAnimationFrame(animate);
+            }
+          };
+          
+          animate();
+        }
+      } else if (!opportunityMarkerState) {
+        // Just resume auto-rotate if no country and no opportunity
         controls.autoRotate = true;
       }
+      
+      // Update ref for next render
+      prevSelectedCountryRef.current = null;
       return;
     }
+    
+    // Update ref for next render
+    prevSelectedCountryRef.current = selectedCountry;
     
     const globe = globeInstanceRef.current;
     const controls = globe.controls();
@@ -847,10 +974,10 @@ const GlobeComponent = ({ roomCode, isMaster, user, opportunityMarker, opportuni
       if (typeof globeInstanceRef.current.pointOfView === 'function') {
         try {
           globeInstanceRef.current.pointOfView(
-            { lat: center.lat, lng: center.lng, altitude: 2.5 },
+            { lat: center.lat, lng: center.lng, altitude: 1.1 },
             1500
           );
-          console.log('Used pointOfView method');
+          console.log('Used pointOfView method for country');
           return;
         } catch (error) {
           console.log('pointOfView failed, using manual calculation:', error);
@@ -860,7 +987,9 @@ const GlobeComponent = ({ roomCode, isMaster, user, opportunityMarker, opportuni
       // Manual calculation: get camera position to focus on the point
       const camera = globe.camera();
       const currentPos = camera.position.clone();
-      const radius = currentPos.length(); // Maintain current distance from globe
+      const baseRadius = currentPos.length();
+      // Reduce radius by 45% to zoom in (multiply by 0.55) to match altitude 1.1
+      const radius = baseRadius * 0.55;
       
       // Calculate target camera position (opposite the point on globe)
       const targetPos = getCameraPositionForPoint(center.lat, center.lng, radius);
@@ -897,13 +1026,7 @@ const GlobeComponent = ({ roomCode, isMaster, user, opportunityMarker, opportuni
     }
   }, [selectedCountry, countriesData, opportunityMarkerState]);
   
-  // Reset auto-rotate when country is deselected
-  useEffect(() => {
-    if (!globeInstanceRef.current || selectedCountry) return;
-    
-    const controls = globeInstanceRef.current.controls();
-    controls.autoRotate = true; //continue rotation when deselected
-  }, [selectedCountry]);
+  // Note: Country deselection zoom is now handled in the main country selection effect above
 
   // Update points for opportunities (red dots)
   useEffect(() => {
@@ -912,71 +1035,21 @@ const GlobeComponent = ({ roomCode, isMaster, user, opportunityMarker, opportuni
     const globe = globeInstanceRef.current;
     const allPoints = [];
 
-    // Priority: If a country is selected, show all opportunities in that country
-    // Only show single opportunity marker if no country is selected
-    if (selectedCountry && opportunities.length > 0) {
-      // Helper function to match country names (same as in OpportunitiesPanel)
-      const matchCountry = (oppCountry, selectedCountry) => {
-        const opp = oppCountry?.toLowerCase().trim() || '';
-        const selected = selectedCountry?.toLowerCase().trim() || '';
-        
-        if (!opp || !selected) return false;
-        
-        // Direct match
-        if (opp === selected) return true;
-        
-        // Country name mapping for variations
-        // Each array contains all valid names for that country
-        const countryGroups = [
-          ['united states', 'united states of america', 'usa'],
-          ['united kingdom', 'uk', 'britain', 'great britain', 'england'],
-          ['russia', 'russian federation'],
-          ['japan'],
-          ['brazil'],
-          ['india'],
-          ['germany'],
-          ['australia'],
-          ['mexico'],
-          ['china'],
-          ['argentina'],
-          ['egypt'],
-        ];
-        
-        // Check if both countries are in the same group
-        for (const group of countryGroups) {
-          const selectedInGroup = group.some(v => v === selected);
-          const oppInGroup = group.some(v => v === opp);
-          if (selectedInGroup && oppInGroup) {
-            return true;
-          }
-        }
-        
-        // For multi-word countries, only match if one is a substring of the other
-        // This handles "United States" matching "United States of America"
-        // But only if the shorter one is completely contained in the longer one
-        if (selected.includes(opp) && opp.length >= 5) {
-          // "united states" is contained in "united states of america"
-          return true;
-        }
-        if (opp.includes(selected) && selected.length >= 5) {
-          // "united states of america" contains "united states"
-          return true;
-        }
-        
-        return false;
-      };
-      
-      const countryOpportunities = opportunities.filter(opp => {
-        const matches = matchCountry(opp.country, selectedCountry);
-        console.log(`Globe: Checking "${opp.name}" (${opp.country}) vs "${selectedCountry}" = ${matches}`);
-        return matches;
+    // Priority: If a specific opportunity is selected, show only that one
+    // Otherwise, show the opportunities passed (which are already paginated and filtered)
+    if (opportunityMarkerState && opportunityMarkerState.lat && opportunityMarkerState.lng) {
+      // Show only the selected opportunity
+      allPoints.push({
+        lat: opportunityMarkerState.lat,
+        lng: opportunityMarkerState.lng,
+        name: opportunityMarkerState.name || 'Opportunity',
+        id: 'opportunity-marker',
+        type: 'opportunity'
       });
-      
-      console.log(`Globe: Found ${countryOpportunities.length} opportunities for country: ${selectedCountry}`);
-      console.log(`Globe: Matching opportunities:`, countryOpportunities.map(o => ({ name: o.name, country: o.country })));
-
-      // Add all opportunities in the selected country as red dots
-      countryOpportunities.forEach((opp, index) => {
+    } else if (opportunities.length > 0) {
+      // Show the opportunities passed (already paginated and filtered by OpportunitiesPanel)
+      // This will show only the 5 opportunities on the current page
+      opportunities.forEach((opp, index) => {
         allPoints.push({
           lat: opp.lat,
           lng: opp.lng,
@@ -985,16 +1058,7 @@ const GlobeComponent = ({ roomCode, isMaster, user, opportunityMarker, opportuni
           type: 'opportunity'
         });
       });
-    }
-    // If a specific opportunity is selected (from clicking an opportunity tile) and NO country is selected
-    else if (opportunityMarkerState && opportunityMarkerState.lat && opportunityMarkerState.lng) {
-      allPoints.push({
-        lat: opportunityMarkerState.lat,
-        lng: opportunityMarkerState.lng,
-        name: opportunityMarkerState.name || 'Opportunity',
-        id: 'opportunity-marker',
-        type: 'opportunity'
-      });
+      console.log(`Globe: Showing ${opportunities.length} paginated opportunities`);
     }
     
     // Update points - all are red opportunity markers
@@ -1042,7 +1106,7 @@ const GlobeComponent = ({ roomCode, isMaster, user, opportunityMarker, opportuni
   }, [selectedCountry, hoveredCountry]);
 
   return (
-    <div style={{ width: "100%", height: "100%", position: "relative" }}>
+    <div style={{ width: "100%", height: "100%", position: "relative", minWidth: 0, minHeight: 0 }}>
       {loading && (
         <div
           style={{
@@ -1058,7 +1122,7 @@ const GlobeComponent = ({ roomCode, isMaster, user, opportunityMarker, opportuni
           Loading globe...
         </div>
       )}
-      <div ref={globeRef} style={{ width: "100%", height: "100%", cursor: "pointer" }} />
+      <div ref={globeRef} style={{ width: "100%", height: "100%", cursor: "pointer", minWidth: 0, minHeight: 0 }} />
       
 
       {/* Selected country display - centered at top */}

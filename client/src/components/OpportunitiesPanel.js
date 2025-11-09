@@ -2,17 +2,64 @@ import React, { useEffect, useState, useRef } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import './OpportunitiesPanel.css';
 
-const OpportunitiesPanel = ({ roomCode, onOpportunitySelect, selectedCountry, onOpportunitiesChange, onCountrySelect }) => {
+const OpportunitiesPanel = ({ roomCode, onOpportunitySelect, selectedCountry, onOpportunitiesChange, onCountrySelect, onPaginatedOpportunitiesChange }) => {
   const [opportunities, setOpportunities] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedOpportunityId, setSelectedOpportunityId] = useState(null);
   const [error, setError] = useState(null);
   const [showAllOpportunities, setShowAllOpportunities] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
   const debounceTimerRef = useRef(null);
 
-  // Load opportunities from JSON file
+  // Store the full JSON data
+  const [opportunitiesData, setOpportunitiesData] = useState(null);
+
+  // Helper function to validate and normalize opportunities
+  const validateAndNormalize = (opportunitiesList) => {
+    if (!Array.isArray(opportunitiesList)) {
+      console.warn('validateAndNormalize: opportunitiesList is not an array:', opportunitiesList);
+      return [];
+    }
+    
+    const validated = opportunitiesList
+      .map((opp, index) => {
+        // Handle different field name variations
+        const latlon = opp.latlon || opp.latLon || opp.coordinates || opp.coords;
+        const name = opp.name || opp.Name || opp.title || opp.Title || `Opportunity ${index + 1}`;
+        const link = opp.Link || opp.link || opp.url || opp.URL || '';
+        const country = opp.Country || opp.country || opp.location || 'Unknown';
+
+        // Validate latlon
+        if (!Array.isArray(latlon) || latlon.length !== 2) {
+          console.warn(`Invalid coordinates for opportunity ${index}:`, opp);
+          return null;
+        }
+
+        const [lat, lng] = latlon;
+        if (typeof lat !== 'number' || typeof lng !== 'number') {
+          console.warn(`Invalid lat/lng types for opportunity ${index}:`, opp);
+          return null;
+        }
+
+        return {
+          id: opp.id || `opp-${index}`,
+          lat,
+          lng,
+          name,
+          link,
+          country
+        };
+      })
+      .filter(opp => opp !== null); // Remove invalid entries
+    
+    console.log(`validateAndNormalize: ${opportunitiesList.length} input, ${validated.length} validated`);
+    return validated;
+  };
+
+  // Load opportunities JSON file
   useEffect(() => {
-    const loadOpportunities = async () => {
+    const loadOpportunitiesData = async () => {
       try {
         // Fetch from JSON file in public folder
         const response = await fetch('/opportunities.json');
@@ -20,57 +67,30 @@ const OpportunitiesPanel = ({ roomCode, onOpportunitySelect, selectedCountry, on
         if (response.ok) {
           const data = await response.json();
           
-          // Handle different JSON formats
-          let opportunitiesList = [];
-          if (Array.isArray(data)) {
-            opportunitiesList = data;
-          } else if (data.opportunities && Array.isArray(data.opportunities)) {
-            opportunitiesList = data.opportunities;
-          } else {
-            throw new Error('Invalid JSON format');
-          }
-
-          // Validate and normalize opportunities
-          const validatedOpportunities = opportunitiesList
-            .map((opp, index) => {
-              // Handle different field name variations
-              const latlon = opp.latlon || opp.latLon || opp.coordinates || opp.coords;
-              const name = opp.name || opp.Name || opp.title || opp.Title || `Opportunity ${index + 1}`;
-              const link = opp.Link || opp.link || opp.url || opp.URL || '';
-              const country = opp.Country || opp.country || opp.location || 'Unknown';
-
-              // Validate latlon
-              if (!Array.isArray(latlon) || latlon.length !== 2) {
-                console.warn(`Invalid coordinates for opportunity ${index}:`, opp);
-                return null;
-              }
-
-              const [lat, lng] = latlon;
-              if (typeof lat !== 'number' || typeof lng !== 'number') {
-                console.warn(`Invalid lat/lng types for opportunity ${index}:`, opp);
-                return null;
-              }
-
-              return {
-                id: opp.id || `opp-${index}`,
-                lat,
-                lng,
-                name,
-                link,
-                country
-              };
-            })
-            .filter(opp => opp !== null); // Remove invalid entries
-
-          if (validatedOpportunities.length > 0) {
-            setOpportunities(validatedOpportunities);
-            setError(null);
+          // Store the full JSON object
+          setOpportunitiesData(data);
+          
+          // Load "hardcode" entries on initial boot (only if no country is selected)
+          // The second useEffect will handle country-specific loading
+          if (data.hardcode && Array.isArray(data.hardcode)) {
+            console.log('Initial load: Found hardcode entries:', data.hardcode.length);
+            // Only set hardcode if no country is currently selected
+            // Otherwise, let the second useEffect handle it based on selectedCountry
+            if (!selectedCountry) {
+              const validatedOpportunities = validateAndNormalize(data.hardcode);
+              console.log('Initial load: Setting hardcode opportunities:', validatedOpportunities.length);
+              setOpportunities(validatedOpportunities);
+              setError(null);
+            } else {
+              console.log('Initial load: Country already selected, will load in second useEffect');
+            }
             setLoading(false);
-            return;
+          } else {
+            throw new Error('No "hardcode" entries found in JSON');
           }
+        } else {
+          throw new Error('Failed to load opportunities.json');
         }
-        
-        throw new Error('Failed to load opportunities.json');
       } catch (err) {
         console.error('Error loading opportunities:', err.message);
         setError('Failed to load opportunities. Please check that opportunities.json exists.');
@@ -78,81 +98,127 @@ const OpportunitiesPanel = ({ roomCode, onOpportunitySelect, selectedCountry, on
       }
     };
 
-    loadOpportunities();
+    loadOpportunitiesData();
   }, []);
 
-  // Helper function to match country names
-  const matchCountry = (oppCountry, selectedCountry) => {
-    const opp = oppCountry?.toLowerCase().trim() || '';
-    const selected = selectedCountry?.toLowerCase().trim() || '';
-    
-    if (!opp || !selected) return false;
-    
-    // Direct match
-    if (opp === selected) return true;
-    
-    // Country name mapping for variations
-    const countryGroups = [
-      ['united states', 'united states of america', 'usa'],
-      ['united kingdom', 'uk', 'britain', 'great britain', 'england'],
-      ['russia', 'russian federation'],
-      ['japan'],
-      ['brazil'],
-      ['india'],
-      ['germany'],
-      ['australia'],
-      ['mexico'],
-      ['china'],
-      ['argentina'],
-      ['egypt'],
-    ];
-    
-    // Check if both countries are in the same group
-    for (const group of countryGroups) {
-      const selectedInGroup = group.some(v => v === selected);
-      const oppInGroup = group.some(v => v === opp);
-      if (selectedInGroup && oppInGroup) {
-        return true;
+  // Update opportunities when country selection changes
+  useEffect(() => {
+    if (!opportunitiesData) {
+      console.log('Update opportunities: waiting for opportunitiesData to load');
+      return; // Wait for data to load
+    }
+
+    console.log('Update opportunities: selectedCountry =', selectedCountry, 'selectedOpportunityId =', selectedOpportunityId, 'opportunitiesData keys:', Object.keys(opportunitiesData));
+
+    // If a specific opportunity is selected, don't change the opportunities list
+    // This prevents reverting to hardcode when clearing country selection
+    if (selectedOpportunityId) {
+      console.log('Opportunity is selected, keeping current opportunities list');
+      return;
+    }
+
+    if (selectedCountry) {
+      // Find country key (case-insensitive search)
+      const countryKey = Object.keys(opportunitiesData).find(
+        key => key.toLowerCase() === selectedCountry.toLowerCase()
+      );
+
+      console.log('Country selected:', selectedCountry, 'Found key:', countryKey);
+
+      if (countryKey && Array.isArray(opportunitiesData[countryKey])) {
+        const validatedOpportunities = validateAndNormalize(opportunitiesData[countryKey]);
+        console.log(`Setting opportunities for country ${countryKey}:`, validatedOpportunities.length);
+        setOpportunities(validatedOpportunities);
+        setError(null);
+      } else {
+        // Country not found in JSON, fall back to hardcode entries
+        console.log(`No opportunities found for country: ${selectedCountry}, falling back to hardcode`);
+        if (opportunitiesData.hardcode && Array.isArray(opportunitiesData.hardcode)) {
+          const validatedOpportunities = validateAndNormalize(opportunitiesData.hardcode);
+          console.log('Setting hardcode opportunities (country not found):', validatedOpportunities.length);
+          setOpportunities(validatedOpportunities);
+          setError(null);
+        } else {
+          setOpportunities([]);
+          setError(null);
+        }
+      }
+    } else {
+      // No country selected, show "hardcode" entries (only if no opportunity is selected)
+      if (opportunitiesData.hardcode && Array.isArray(opportunitiesData.hardcode)) {
+        console.log('No country selected, loading hardcode entries:', opportunitiesData.hardcode.length);
+        const validatedOpportunities = validateAndNormalize(opportunitiesData.hardcode);
+        console.log('Setting hardcode opportunities:', validatedOpportunities.length, 'entries:', validatedOpportunities.map(o => o.name));
+        setOpportunities(validatedOpportunities);
+        setError(null);
+      } else {
+        console.warn('No hardcode entries found in opportunitiesData');
       }
     }
-    
-    // For multi-word countries, only match if one is a substring of the other
-    if (selected.includes(opp) && opp.length >= 5) {
-      return true;
-    }
-    if (opp.includes(selected) && selected.length >= 5) {
-      return true;
-    }
-    
-    return false;
-  };
+  }, [selectedCountry, opportunitiesData, selectedOpportunityId]);
 
-  // Calculate displayed opportunities (same logic as in render)
-  const getDisplayedOpportunities = () => {
-    let filteredOpportunities = opportunities;
-    
-    // If a country is selected, filter by country
-    if (selectedCountry) {
-      filteredOpportunities = opportunities.filter(opp => {
-        return matchCountry(opp.country, selectedCountry);
-      });
-    }
-    
-    // Then apply showAllOpportunities filter
-    const displayed = showAllOpportunities 
-      ? filteredOpportunities 
-      : filteredOpportunities.filter(opp => opp.id === selectedOpportunityId);
-    
-    return displayed;
-  };
-
-  // Expose displayed opportunities to parent (not all opportunities)
+  // Notify parent when opportunities change
   useEffect(() => {
-    if (onOpportunitiesChange && opportunities.length > 0) {
-      const displayed = getDisplayedOpportunities();
-      onOpportunitiesChange(displayed);
+    if (onOpportunitiesChange) {
+      console.log('Notifying parent of opportunities change:', opportunities.length);
+      onOpportunitiesChange(opportunities);
     }
   }, [opportunities, selectedCountry, showAllOpportunities, selectedOpportunityId, onOpportunitiesChange]);
+
+  // Reset to page 1 when opportunities change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [opportunities.length, selectedCountry]);
+
+  // Notify parent when paginated opportunities change (for globe display)
+  // This effect runs after the component calculates displayedOpportunities
+  useEffect(() => {
+    if (onPaginatedOpportunitiesChange) {
+      // Use the same logic as displayedOpportunities calculation
+      let filteredOpportunities = opportunities;
+      
+      if (selectedCountry) {
+        // Use the same matchCountry logic (defined below in the component)
+        filteredOpportunities = opportunities.filter(opp => {
+          const oppCountry = opp.country?.toLowerCase().trim() || '';
+          const selected = selectedCountry?.toLowerCase().trim() || '';
+          
+          if (!oppCountry || !selected) return false;
+          if (oppCountry === selected) return true;
+          
+          // Country name mapping for variations
+          const countryGroups = [
+            ['united states', 'united states of america', 'usa'],
+            ['united kingdom', 'uk', 'britain', 'great britain', 'england'],
+            ['russia', 'russian federation'],
+            ['japan'], ['brazil'], ['india'], ['germany'], ['australia'],
+            ['mexico'], ['china'], ['argentina'], ['egypt'],
+          ];
+          
+          for (const group of countryGroups) {
+            const selectedInGroup = group.some(v => v === selected);
+            const oppInGroup = group.some(v => v === oppCountry);
+            if (selectedInGroup && oppInGroup) return true;
+          }
+          
+          if (selected.includes(oppCountry) && oppCountry.length >= 5) return true;
+          if (oppCountry.includes(selected) && selected.length >= 5) return true;
+          
+          return false;
+        });
+      }
+      
+      const displayedOpps = showAllOpportunities 
+        ? filteredOpportunities 
+        : filteredOpportunities.filter(opp => opp.id === selectedOpportunityId);
+      
+      const startIndex = (currentPage - 1) * itemsPerPage;
+      const endIndex = startIndex + itemsPerPage;
+      const paginatedOpps = displayedOpps.slice(startIndex, endIndex);
+      
+      onPaginatedOpportunitiesChange(paginatedOpps);
+    }
+  }, [currentPage, opportunities, selectedCountry, showAllOpportunities, selectedOpportunityId, onPaginatedOpportunitiesChange]);
 
   // Load initial selected opportunity from database
   useEffect(() => {
@@ -202,6 +268,8 @@ const OpportunitiesPanel = ({ roomCode, onOpportunitySelect, selectedCountry, on
         (payload) => {
           const { selected_opportunity_lat, selected_opportunity_lng, selected_country } = payload.new || {};
           const oldSelectedCountry = payload.old?.selected_country;
+          const oldLat = payload.old?.selected_opportunity_lat;
+          const oldLng = payload.old?.selected_opportunity_lng;
           
           // Handle country selection changes
           if (selected_country !== oldSelectedCountry) {
@@ -209,27 +277,31 @@ const OpportunitiesPanel = ({ roomCode, onOpportunitySelect, selectedCountry, on
               // Country was selected, show all opportunities in that country
               setShowAllOpportunities(true);
               setSelectedOpportunityId(null);
-            } else {
-              // Country was cleared
+            } else if (!selected_opportunity_lat && !selected_opportunity_lng) {
+              // Country was cleared AND no opportunity is selected - reset to show all
               setShowAllOpportunities(true);
               setSelectedOpportunityId(null);
             }
+            // If country was cleared but opportunity is selected, keep the opportunity selected
           }
           
           // Handle opportunity marker (only if no country is selected)
           if (selected_opportunity_lat && selected_opportunity_lng && !selected_country) {
-            // Find matching opportunity
-            const matchingOpp = opportunities.find(
-              opp => 
-                Math.abs(opp.lat - selected_opportunity_lat) < 0.01 &&
-                Math.abs(opp.lng - selected_opportunity_lng) < 0.01
-            );
-            if (matchingOpp) {
-              setSelectedOpportunityId(matchingOpp.id);
-              setShowAllOpportunities(false); // Hide other opportunities
-              // Trigger globe update
-              if (onOpportunitySelect) {
-                onOpportunitySelect(matchingOpp.lat, matchingOpp.lng, matchingOpp.name);
+            // Only update if the opportunity actually changed
+            if (selected_opportunity_lat !== oldLat || selected_opportunity_lng !== oldLng) {
+              // Find matching opportunity
+              const matchingOpp = opportunities.find(
+                opp => 
+                  Math.abs(opp.lat - selected_opportunity_lat) < 0.01 &&
+                  Math.abs(opp.lng - selected_opportunity_lng) < 0.01
+              );
+              if (matchingOpp) {
+                setSelectedOpportunityId(matchingOpp.id);
+                setShowAllOpportunities(false); // Hide other opportunities
+                // Trigger globe update
+                if (onOpportunitySelect) {
+                  onOpportunitySelect(matchingOpp.lat, matchingOpp.lng, matchingOpp.name);
+                }
               }
             }
           } else if (!selected_opportunity_lat && !selected_opportunity_lng && !selected_country) {
@@ -257,53 +329,38 @@ const OpportunitiesPanel = ({ roomCode, onOpportunitySelect, selectedCountry, on
     debounceTimerRef.current = setTimeout(() => {
       console.log('Opportunity clicked:', opportunity);
       
-      // When clicking an opportunity, select its country instead of just the opportunity
-      // This will show all opportunities in that country and pan to it
-      if (opportunity.country && onCountrySelect) {
-        console.log('Setting country from opportunity:', opportunity.country);
-        setShowAllOpportunities(true); // Show all opportunities in the country
-        setSelectedOpportunityId(null); // Don't highlight a single opportunity
-        
-        // Set the country - this will trigger showing all opportunities in that country
-        onCountrySelect(opportunity.country);
-        
-        // Update database to set the country and clear opportunity marker
-        if (roomCode) {
-          supabase
-            .from('rooms')
-            .update({
-              selected_country: opportunity.country,
-              selected_opportunity_lat: null,
-              selected_opportunity_lng: null,
-            })
-            .eq('room_code', roomCode)
-            .then(({ error }) => {
-              if (error) {
-                console.error('Error updating selected country from opportunity:', error);
-              } else {
-                console.log('Selected country from opportunity updated in database:', opportunity.country);
-              }
-            });
-        }
-      } else {
-        // Fallback: if no country or callback, use old behavior
-        setSelectedOpportunityId(opportunity.id);
-        setShowAllOpportunities(false);
-        
-        if (onOpportunitySelect) {
-          onOpportunitySelect(opportunity.lat, opportunity.lng, opportunity.name);
-        }
-        
-        if (roomCode) {
-          supabase
-            .from('rooms')
-            .update({
-              selected_opportunity_lat: opportunity.lat,
-              selected_opportunity_lng: opportunity.lng,
-              selected_country: null,
-            })
-            .eq('room_code', roomCode);
-        }
+      // Always select the specific opportunity when clicked
+      // This will show only that one opportunity on the globe
+      setSelectedOpportunityId(opportunity.id);
+      setShowAllOpportunities(false);
+      
+      // Clear country selection when a specific opportunity is selected
+      if (onCountrySelect) {
+        onCountrySelect(null);
+      }
+      
+      // Notify parent of the selected opportunity
+      if (onOpportunitySelect) {
+        onOpportunitySelect(opportunity.lat, opportunity.lng, opportunity.name);
+      }
+      
+      // Update database to set the opportunity marker and clear country selection
+      if (roomCode) {
+        supabase
+          .from('rooms')
+          .update({
+            selected_opportunity_lat: opportunity.lat,
+            selected_opportunity_lng: opportunity.lng,
+            selected_country: null,
+          })
+          .eq('room_code', roomCode)
+          .then(({ error }) => {
+            if (error) {
+              console.error('Error updating selected opportunity:', error);
+            } else {
+              console.log('Selected opportunity updated in database:', opportunity.name);
+            }
+          });
       }
     }, 100);
   };
@@ -375,6 +432,24 @@ const OpportunitiesPanel = ({ roomCode, onOpportunitySelect, selectedCountry, on
     ? filteredOpportunities 
     : filteredOpportunities.filter(opp => opp.id === selectedOpportunityId);
 
+  // Calculate pagination
+  const totalPages = Math.ceil(displayedOpportunities.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedOpportunities = displayedOpportunities.slice(startIndex, endIndex);
+
+  const handleNextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(currentPage + 1);
+    }
+  };
+
+  const handlePreviousPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1);
+    }
+  };
+
   return (
     <div className="opportunities-panel">
       <div className="opportunities-header">
@@ -401,27 +476,54 @@ const OpportunitiesPanel = ({ roomCode, onOpportunitySelect, selectedCountry, on
             <p>No opportunities available.</p>
           </div>
         ) : (
-          displayedOpportunities.map((opp) => (
-            <div
-              key={opp.id}
-              className={`opportunity-tile ${selectedOpportunityId === opp.id ? 'selected' : ''}`}
-              onClick={() => handleTileClick(opp)}
-            >
-              <div className="opportunity-title">{opp.name}</div>
-              <div className="opportunity-country">{opp.country}</div>
-              {opp.link && (
-                <a
-                  href={opp.link}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="opportunity-link"
-                  onClick={(e) => e.stopPropagation()}
+          <>
+            {paginatedOpportunities.map((opp) => (
+              <div
+                key={opp.id}
+                className={`opportunity-tile ${selectedOpportunityId === opp.id ? 'selected' : ''}`}
+                onClick={() => handleTileClick(opp)}
+              >
+                <div className="opportunity-title">{opp.name}</div>
+                <div className="opportunity-country">{opp.country}</div>
+                {opp.link && (
+                  <a
+                    href={opp.link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="opportunity-link"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    Learn more →
+                  </a>
+                )}
+              </div>
+            ))}
+            
+            {/* Pagination Controls */}
+            {displayedOpportunities.length > itemsPerPage && (
+              <div className="pagination-controls">
+                <button
+                  className="pagination-button"
+                  onClick={handlePreviousPage}
+                  disabled={currentPage === 1}
+                  title="Previous page"
                 >
-                  Learn more →
-                </a>
-              )}
-            </div>
-          ))
+                  ← Previous
+                </button>
+                <span className="pagination-info">
+                  Page {currentPage} of {totalPages}
+                </span>
+                <button
+                  className="pagination-button"
+                  onClick={handleNextPage}
+                  disabled={currentPage === totalPages}
+                  title="Next page"
+                >
+                  Next →
+                </button>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>
@@ -429,4 +531,3 @@ const OpportunitiesPanel = ({ roomCode, onOpportunitySelect, selectedCountry, on
 };
 
 export default OpportunitiesPanel;
-

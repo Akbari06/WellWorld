@@ -19,6 +19,7 @@ const PlanningPage = ({ user }) => {
   const [opportunityMarker, setOpportunityMarker] = useState(null);
   const [selectedCountry, setSelectedCountry] = useState(null);
   const [opportunities, setOpportunities] = useState([]);
+  const [paginatedOpportunities, setPaginatedOpportunities] = useState([]);
 
   useEffect(() => {
     (async () => {
@@ -122,15 +123,16 @@ const PlanningPage = ({ user }) => {
                   // Handle country selection changes
                   if (selected_country !== oldSelectedCountry) {
                     setSelectedCountry(selected_country);
-                    // Clear opportunity marker when country is selected
+                    // Clear opportunity marker only if country is being set (not when cleared)
                     if (selected_country) {
                       setOpportunityMarker(null);
                     }
+                    // If country is cleared but opportunity is set, keep the opportunity marker
                   }
                   
-                  // Handle opportunity marker updates (only if no country is selected)
+                  // Handle opportunity marker updates
                   if (selected_opportunity_lat !== oldLat || selected_opportunity_lng !== oldLng) {
-                    // Only update opportunity marker if no country is currently selected
+                    // Only update if no country is currently selected
                     if (!selected_country) {
                       if (selected_opportunity_lat && selected_opportunity_lng) {
                         setOpportunityMarker({
@@ -241,7 +243,7 @@ const PlanningPage = ({ user }) => {
             isMaster={isMaster} 
             user={user} 
             opportunityMarker={opportunityMarker}
-            opportunities={opportunities}
+            opportunities={paginatedOpportunities.length > 0 ? paginatedOpportunities : opportunities}
             onCountrySelect={(country) => {
               console.log('PlanningPage: Country selected:', country);
               setSelectedCountry(country);
@@ -295,6 +297,9 @@ const PlanningPage = ({ user }) => {
           }}
           onOpportunitiesChange={(opps) => {
             setOpportunities(opps);
+          }}
+          onPaginatedOpportunitiesChange={(paginatedOpps) => {
+            setPaginatedOpportunities(paginatedOpps);
           }}
         />
       </div>
