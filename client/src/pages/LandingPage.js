@@ -18,7 +18,7 @@ const LandingPage = ({ user }) => {
   const [expandedDescription, setExpandedDescription] = useState(null);
   const [language, setLanguage] = useState('en');
   const [activeTab, setActiveTab] = useState('create');
-  const [roomName, setRoomName] = useState('');
+  // room name input removed from UI; names will default to Room <CODE> on creation
   const languageOptions = [
     { value: 'en', label: 'English' },
     { value: 'es', label: 'Español' },
@@ -194,8 +194,9 @@ const LandingPage = ({ user }) => {
         throw new Error('Failed to generate unique room code');
       }
 
-      // Create room
-      const sanitizedRoomName = roomName.trim();
+            // Create room
+      // No room name input in UI — use default name based on generated code
+      const sanitizedRoomName = '';
 
       const { data: room, error: createError } = await supabase
         .from('rooms')
@@ -227,7 +228,6 @@ const LandingPage = ({ user }) => {
       }
 
       navigate(`/room/${room.room_code}`);
-      setRoomName('');
     } catch (err) {
       console.error('Error creating room:', err);
       setError('Failed to create room. Please try again.');
@@ -506,19 +506,7 @@ const LandingPage = ({ user }) => {
                   <p>{copy.createCardSubtitle}</p>
                 </div>
               </div>
-              <label htmlFor="room-name-input" className="input-label">
-                {copy.roomNameLabel}
-              </label>
-              <input
-                id="room-name-input"
-                type="text"
-                value={roomName}
-                onChange={(e) => setRoomName(e.target.value)}
-                placeholder={copy.roomNamePlaceholder}
-                className="input-field"
-                disabled={loading}
-              />
-              <button
+<button
                 className="btn btn-primary"
                 onClick={handleCreateRoom}
                 disabled={loading}
