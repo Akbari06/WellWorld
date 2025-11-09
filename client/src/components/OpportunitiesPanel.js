@@ -1,3 +1,5 @@
+
+
 import React, { useEffect, useState, useRef } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import './OpportunitiesPanel.css';
@@ -163,7 +165,7 @@ const OpportunitiesPanel = ({ roomCode, onOpportunitySelect, selectedCountry, on
       console.log('Notifying parent of opportunities change:', opportunities.length);
       onOpportunitiesChange(opportunities);
     }
-  }, [opportunities, selectedCountry, showAllOpportunities, selectedOpportunityId, onOpportunitiesChange]);
+  }, [opportunities, onOpportunitiesChange]);
 
   // Reset to page 1 when opportunities change
   useEffect(() => {
@@ -411,6 +413,58 @@ const OpportunitiesPanel = ({ roomCode, onOpportunitySelect, selectedCountry, on
       </div>
     );
   }
+
+  // Helper function to match country names
+  // Handles variations between GeoJSON country names and opportunity country names
+  const matchCountry = (oppCountry, selectedCountry) => {
+    const opp = oppCountry?.toLowerCase().trim() || '';
+    const selected = selectedCountry?.toLowerCase().trim() || '';
+    
+    if (!opp || !selected) return false;
+    
+    // Direct match
+    if (opp === selected) return true;
+    
+    // Country name mapping for variations
+    // Each array contains all valid names for that country
+    const countryGroups = [
+      ['united states', 'united states of america', 'usa'],
+      ['united kingdom', 'uk', 'britain', 'great britain', 'england'],
+      ['russia', 'russian federation'],
+      ['japan'],
+      ['brazil'],
+      ['india'],
+      ['germany'],
+      ['australia'],
+      ['mexico'],
+      ['china'],
+      ['argentina'],
+      ['egypt'],
+    ];
+    
+    // Check if both countries are in the same group
+    for (const group of countryGroups) {
+      const selectedInGroup = group.some(v => v === selected);
+      const oppInGroup = group.some(v => v === opp);
+      if (selectedInGroup && oppInGroup) {
+        return true;
+      }
+    }
+    
+    // For multi-word countries, only match if one is a substring of the other
+    // This handles "United States" matching "United States of America"
+    // But only if the shorter one is completely contained in the longer one
+    if (selected.includes(opp) && opp.length >= 5) {
+      // "united states" is contained in "united states of america"
+      return true;
+    }
+    if (opp.includes(selected) && selected.length >= 5) {
+      // "united states of america" contains "united states"
+      return true;
+    }
+    
+    return false;
+  };
 
   // Filter opportunities based on showAllOpportunities state and selected country
   let filteredOpportunities = opportunities;
