@@ -3,42 +3,47 @@
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
-  background: radial-gradient(circle at 20% 20%, #101727, #05060a);
-  color: #f8fafc;
+  overflow-x: hidden;
+  background: linear-gradient(180deg, #f5f7fb 0%, #eef2f7 60%, #e4ecf5 100%);
+  color: #0f172a;
 }
 
 .planning-header {
-  background: rgba(6, 8, 18, 0.85);
-  padding: 16px 32px;
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+  background: #ffffff;
+  padding: 18px 36px;
+  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.08);
   z-index: 10;
   position: relative;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+  gap: 16px;
 }
 
 .planning-header h1 {
-  font-size: 22px;
+  font-size: 24px;
   font-weight: 700;
-  color: #f8fafc;
+  color: #0f172a;
   margin: 0;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.02em;
+  flex: 1;
 }
 
 .btn-leave-room {
-  padding: 10px 18px;
+  padding: 8px 18px;
   font-size: 14px;
   background: linear-gradient(120deg, #f43f5e, #f97316);
   color: white;
   border: none;
-  border-radius: 10px;
+  border-radius: 999px;
   font-weight: 700;
   cursor: pointer;
   transition: transform 0.2s, box-shadow 0.2s;
-  box-shadow: 0 8px 25px rgba(249, 115, 22, 0.35);
+  box-shadow: 0 6px 18px rgba(249, 115, 22, 0.35);
+  width: auto;
+  min-width: 140px;
+  flex: 0 0 auto;
 }
 
 .btn-leave-room:hover {
@@ -46,41 +51,60 @@
   box-shadow: 0 12px 32px rgba(249, 115, 22, 0.45);
 }
 
-.planning-content {
-  flex: 1;
-  display: grid;
-  grid-template-columns: 340px minmax(0, 1fr) 340px;
-  gap: 20px;
-  padding: 20px 28px 32px;
+.planning-stage {
+  position: relative;
   width: 100%;
-  height: calc(100vh - 80px);
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 32px clamp(16px, 4vw, 56px) 48px;
   box-sizing: border-box;
-}
-
-.planning-content > * {
-  min-height: 0;
-}
-
-.planning-content > .chat-container {
-  grid-column: 1;
-}
-
-.planning-content > .opportunities-panel {
-  grid-column: 3;
+  min-height: calc(100vh - 90px);
 }
 
 .globe-wrapper {
-  grid-column: 2;
   position: relative;
   width: 100%;
+  max-width: 1000px;
+  min-height: 480px;
   height: 100%;
   display: flex;
   justify-content: center;
   align-items: center;
-  border-radius: 24px;
+  border-radius: 36px;
   overflow: hidden;
-  background: radial-gradient(circle at 30% 20%, rgba(30, 58, 138, 0.4), rgba(0, 0, 0, 0.8));
-  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.45);
+  background: #fdfdfd;
+  box-shadow: 0 40px 90px rgba(15, 23, 42, 0.15);
+  margin: 0 auto;
+  padding: 16px;
+}
+
+.planning-overlay {
+  position: absolute;
+  top: 40px;
+  width: clamp(240px, 20vw, 320px);
+  max-height: calc(100% - 80px);
+  display: flex;
+}
+
+.planning-overlay-left {
+  left: clamp(16px, 3vw, 48px);
+}
+
+.planning-overlay-right {
+  right: clamp(16px, 3vw, 48px);
+}
+
+.planning-overlay .chat-container,
+.planning-overlay .opportunities-panel {
+  width: 100%;
+  height: 100%;
+}
+
+.globe-wrapper > div,
+.globe-wrapper canvas {
+  position: absolute !important;
+  inset: 0 !important;
+  margin: 0 auto !important;
 }
 
 .planning-loading,
@@ -114,31 +138,24 @@
 }
 
 @media (max-width: 1200px) {
-  .planning-content {
-    grid-template-columns: 300px minmax(0, 1fr);
-  }
-
-  .planning-content .opportunities-panel {
-    grid-column: span 2;
-    height: 320px;
+  .planning-overlay {
+    width: clamp(200px, 22vw, 280px);
   }
 }
 
-@media (max-width: 900px) {
-  .planning-content {
-    grid-template-columns: minmax(0, 1fr);
-    grid-auto-rows: minmax(0, auto);
-    height: auto;
+@media (max-width: 1024px) {
+  .planning-stage {
+    padding-bottom: 120px;
   }
 
-  .planning-content .chat-container,
-  .planning-content .opportunities-panel {
-    grid-column: 1;
-    height: auto;
+  .planning-overlay {
+    position: static;
+    width: 100%;
+    max-height: none;
+    margin-bottom: 24px;
   }
 
-  .globe-wrapper {
-    grid-column: 1;
-    height: 60vh;
+  .planning-overlay-right {
+    margin-top: 24px;
   }
 }

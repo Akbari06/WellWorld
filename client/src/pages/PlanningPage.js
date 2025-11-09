@@ -233,8 +233,7 @@ const PlanningPage = ({ user }) => {
           Leave Room
         </button>
       </div>
-      <div className="planning-content">
-        {/* Globe as background layer - centered */}
+      <div className="planning-stage">
         <div className="globe-wrapper">
           <GlobeComponent 
             roomCode={roomCode} 
@@ -260,47 +259,46 @@ const PlanningPage = ({ user }) => {
             }}
           />
         </div>
-        {/* Chat and Opportunities as overlays */}
-        <Chat roomCode={roomCode} userId={user?.id} masterId={masterId} />
-        <OpportunitiesPanel 
-          roomCode={roomCode} 
-          selectedCountry={selectedCountry}
-          onOpportunitySelect={(lat, lng, name) => {
-            console.log('PlanningPage: onOpportunitySelect called with:', { lat, lng, name });
-            if (lat !== null && lat !== undefined && lng !== null && lng !== undefined) {
-              setOpportunityMarker({ lat, lng, name });
-              // Clear country selection when a specific opportunity is selected
-              setSelectedCountry(null);
-              console.log('PlanningPage: Set opportunityMarker to:', { lat, lng, name });
-            } else {
+        <div className="planning-overlay planning-overlay-left">
+          <Chat roomCode={roomCode} userId={user?.id} masterId={masterId} />
+        </div>
+        <div className="planning-overlay planning-overlay-right">
+          <OpportunitiesPanel 
+            roomCode={roomCode} 
+            selectedCountry={selectedCountry}
+            onOpportunitySelect={(lat, lng, name) => {
+              console.log('PlanningPage: onOpportunitySelect called with:', { lat, lng, name });
+              if (lat !== null && lat !== undefined && lng !== null && lng !== undefined) {
+                setOpportunityMarker({ lat, lng, name });
+                setSelectedCountry(null);
+                console.log('PlanningPage: Set opportunityMarker to:', { lat, lng, name });
+              } else {
+                setOpportunityMarker(null);
+                console.log('PlanningPage: Cleared opportunityMarker');
+              }
+            }}
+            onCountrySelect={(country) => {
+              console.log('PlanningPage: Country selected from opportunity:', country);
+              setSelectedCountry(country);
               setOpportunityMarker(null);
-              console.log('PlanningPage: Cleared opportunityMarker');
-            }
-          }}
-          onCountrySelect={(country) => {
-            console.log('PlanningPage: Country selected from opportunity:', country);
-            setSelectedCountry(country);
-            // Clear opportunity marker when country is selected
-            setOpportunityMarker(null);
-            // Clear opportunity marker from database
-            if (roomCode) {
-              supabase
-                .from('rooms')
-                .update({
-                  selected_opportunity_lat: null,
-                  selected_opportunity_lng: null,
-                })
-                .eq('room_code', roomCode);
-            }
-          }}
-          onOpportunitiesChange={(opps) => {
-            setOpportunities(opps);
-          }}
-        />
+              if (roomCode) {
+                supabase
+                  .from('rooms')
+                  .update({
+                    selected_opportunity_lat: null,
+                    selected_opportunity_lng: null,
+                  })
+                  .eq('room_code', roomCode);
+              }
+            }}
+            onOpportunitiesChange={(opps) => {
+              setOpportunities(opps);
+            }}
+          />
+        </div>
       </div>
     </div>
   );
 };
 
 export default PlanningPage;
-
