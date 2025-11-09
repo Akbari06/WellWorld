@@ -9,6 +9,7 @@ const OpportunitiesPanel = ({
   onOpportunitiesChange,
   onCountrySelect,
   onPaginatedOpportunitiesChange,
+  onOpportunitiesDataChange,
 }) => {
   const [opportunities, setOpportunities] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -82,6 +83,11 @@ const OpportunitiesPanel = ({
 
           // Store the full JSON object
           setOpportunitiesData(data);
+          
+          // Notify parent of the full JSON data
+          if (onOpportunitiesDataChange) {
+            onOpportunitiesDataChange(data);
+          }
 
           if (data.hardcode && Array.isArray(data.hardcode)) {
             // Only set hardcode if no country is currently selected

@@ -21,6 +21,7 @@ const PlanningPage = ({ user }) => {
   const [selectedCountry, setSelectedCountry] = useState(null);
   const [opportunities, setOpportunities] = useState([]);
   const [paginatedOpportunities, setPaginatedOpportunities] = useState([]);
+  const [opportunitiesData, setOpportunitiesData] = useState(null);
   const [catsActive, setCatsActive] = useState(false);
   const [cats, setCats] = useState([]);
   const catIntervalRef = useRef(null);
@@ -687,7 +688,7 @@ const PlanningPage = ({ user }) => {
           />
         </div>
         {/* Chat and Opportunities as overlays */}
-        <Chat roomCode={roomCode} userId={user?.id} masterId={masterId} opportunities={opportunities} />
+        <Chat roomCode={roomCode} userId={user?.id} masterId={masterId} paginatedOpportunities={paginatedOpportunities} opportunitiesData={opportunitiesData} />
         <OpportunitiesPanel 
           roomCode={roomCode} 
           selectedCountry={selectedCountry}
@@ -724,6 +725,9 @@ const PlanningPage = ({ user }) => {
           }}
           onPaginatedOpportunitiesChange={(paginatedOpps) => {
             setPaginatedOpportunities(paginatedOpps);
+          }}
+          onOpportunitiesDataChange={(data) => {
+            setOpportunitiesData(data);
           }}
         />
       </div>

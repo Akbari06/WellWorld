@@ -10,18 +10,19 @@ import './Chat.css';
  *  - roomCode (string) - required
  *  - userId (string) - required (id of the current user, used when inserting messages)
  *  - masterId (string) - optional (for showing master badge)
- *  - opportunities (array) - optional array of currently-visible/paginated opportunity objects
+ *  - paginatedOpportunities (array) - optional array of currently-visible/paginated opportunity objects (up to 5)
+ *  - opportunitiesData (object) - optional full opportunities JSON data
  *
  * Notes:
  *  - This component calls the backend endpoint:
- *      POST {apiBase}/api/recommend-opportunity
+ *      POST {apiBase}/api/gemini/recommend-opportunity
  *    where apiBase is taken from REACT_APP_API_URL env var or defaults to '' (same origin).
  *  - The body contains { room_code, displayed_opportunities } (displayed_opportunities is an array of {id,name,link,country})
  *  - On success the endpoint must return JSON with at least { recommendation: string, analyzed_count: number }.
  *  - The recommendation text is inserted into the 'messages' table via Supabase after being returned.
  */
 
-const Chat = ({ roomCode, userId, masterId, opportunities = [] }) => {
+const Chat = ({ roomCode, userId, masterId, paginatedOpportunities = [], opportunitiesData = null }) => {
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
@@ -290,7 +291,7 @@ const Chat = ({ roomCode, userId, masterId, opportunities = [] }) => {
 
   // Ask WorldAI: calls backend endpoint and inserts returned recommendation as a message
   const handleAskWorldAI = async () => {
-    if (!opportunities || opportunities.length === 0) {
+    if (!paginatedOpportunities || paginatedOpportunities.length === 0) {
       alert('No opportunities available to analyze. Please wait for opportunities to load.');
       return;
     }
@@ -298,34 +299,24 @@ const Chat = ({ roomCode, userId, masterId, opportunities = [] }) => {
     setAskWorldAILoading(true);
 
     try {
-      // Prefer to send the visible/paginated list (up to 5). Parent should supply this as `opportunities`.
-      const displayed = Array.isArray(opportunities) ? opportunities.slice(0, 5) : [];
-
-      const displayed_opportunities = displayed
-        .filter((opp) => opp && (opp.link || opp.name))
-        .map((opp) => ({
-          id: opp.id || null,
-          name: opp.name || '',
-          link: opp.link || '',
-          country: opp.country || '',
-        }));
-
-      if (displayed_opportunities.length === 0) {
-        alert('No valid opportunities (with links or names) to analyze.');
-        setAskWorldAILoading(false);
-        return;
-      }
+      // Send only the currently displayed (paginated) opportunities (up to 5) to the backend
+      const displayedOpportunities = paginatedOpportunities.map(opp => ({
+        id: opp.id || null,
+        name: opp.name || '',
+        link: opp.link || '',
+        country: opp.country || '',
+      }));
 
       const payload = {
         room_code: roomCode,
-        displayed_opportunities,
+        displayed_opportunities: displayedOpportunities,
       };
 
-      console.log('Calling recommend-opportunity with payload:', payload);
+      console.log('Calling recommend-opportunity with paginated opportunities:', displayedOpportunities);
 
       // apiBase: allow same-origin by default. If your backend runs on a different origin, set REACT_APP_API_URL.
       const apiBase = process.env.REACT_APP_API_URL ?? '';
-      const endpoint = `${apiBase}/api/recommend-opportunity`;
+      const endpoint = `${apiBase}/api/gemini/recommend-opportunity`;
 
       const response = await fetch(endpoint, {
         method: 'POST',
@@ -429,7 +420,7 @@ const Chat = ({ roomCode, userId, masterId, opportunities = [] }) => {
       <button
         className="ask-worldai-btn"
         onClick={handleAskWorldAI}
-        disabled={askWorldAILoading || !opportunities || opportunities.length === 0}
+        disabled={askWorldAILoading || !paginatedOpportunities || paginatedOpportunities.length === 0}
       >
         {askWorldAILoading ? (
           <span className="ask-worldai-loading">
