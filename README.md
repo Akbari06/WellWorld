@@ -2,6 +2,8 @@
 
 WellWorld is an interactive platform that connects volunteers with global opportunities while providing AI-powered recommendations and real-time collaboration features. The platform features an interactive 3D globe visualization, chat functionality, and smart opportunity matching powered by Google's Gemini AI.
 
+Achieved 🥇 for Google Dev. Group and 🥉 for Booking.com tracks.
+
 ## About the Project
 
 **Inspiration.** I grew up watching neighbors coordinate disaster-response drives with little more than group chats and shared spreadsheets. WellWorld is my attempt to give grassroots organizers a global cockpit where compassion scales as gracefully as code.
